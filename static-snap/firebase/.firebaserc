@@ -1,0 +1,20 @@
+{
+  "projects": {
+    "default": "mr-mirror-61fd2"
+  },
+  "targets": {
+    "mr-mirror-61fd2": {
+      "hosting": {
+        "main": [
+          "mr-mirror-61fd2"
+        ],
+        "radar": [
+          "mr-radar-mirror"
+        ],
+        "whale": [
+          "mr-whale-mirror"
+        ]
+      }
+    }
+  }
+}

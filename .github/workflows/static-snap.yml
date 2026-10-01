@@ -45,3 +45,14 @@ jobs:
           git init -q -b gh-pages && git config user.name mr-snapshot && git config user.email mr-snapshot@users.noreply.github.com
           git add -A && git commit -q -m "snapshots $(date -u +%FT%TZ)"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
+      - name: publish to Google Firebase Hosting (3 sites, every 15 min)
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+        run: |
+          M=$(date -u +%M)
+          if [ "${{ github.event_name }}" = "schedule" ] && [ $((10#$M % 15)) -ge 5 ]; then echo "skip (not a 15-min slot)"; exit 0; fi
+          [ -n "$FIREBASE_SA" ] || { echo "no FIREBASE_SA"; exit 0; }
+          mkdir -p ../fb && cp firebase/firebase.json firebase/.firebaserc ../fb/ && mkdir -p ../fb/public && cp -r public/. ../fb/public/ && rm -f ../fb/public/_headers && mkdir -p ../fb/public/trade && cp -r ../docs/trade/. ../fb/public/trade/
+          printf %s "$FIREBASE_SA" > ../fb/sa.json
+          cd ../fb && GOOGLE_APPLICATION_CREDENTIALS=$PWD/sa.json npx --yes firebase-tools@14 deploy --only hosting --project mr-mirror-61fd2 --non-interactive 2>&1 | tail -6
+          rm -f sa.json
