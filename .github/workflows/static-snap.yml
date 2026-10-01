@@ -31,7 +31,7 @@ jobs:
           UPSTASH_URL: ${{ secrets.UPSTASH_URL }}
           UPSTASH_TOKEN: ${{ secrets.UPSTASH_TOKEN }}
           MONGO_URI: ${{ secrets.MONGO_URI }}
-      - run: mkdir -p public/vendor public/icons && cp ../vendor/*.js public/vendor/ && cp icons/*.png public/icons/
+      - run: mkdir -p public/vendor public/icons public/status && cp ../vendor/*.js public/vendor/ && cp icons/*.png public/icons/ && cp status/index.html public/status/index.html
       - run: npx --yes wrangler@4 deploy --config wrangler.jsonc
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

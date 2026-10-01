@@ -1,0 +1,39 @@
+name: uptime
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: run checks
+        id: h
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON: ${{ secrets.SUPABASE_ANON }}
+        run: node static-snap/health.mjs | tee health.json
+      - name: alert via GitHub Issue (GitHub e-mails / pushes the repo owner)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OPEN=$(gh issue list --label outage --state open --json number -q '.[0].number' || true)
+          if [ "${{ steps.h.outcome }}" = "failure" ]; then
+            BODY="Automatic check failed at $(date -u +%FT%TZ).%0A%0A$(node -e 'const j=JSON.parse(require("fs").readFileSync("health.json","utf8").trim().split("\n").pop());console.log(j.failed.join(" | "))')"
+            gh label create outage --color B60205 --description "site/API outage" 2>/dev/null || true
+            if [ -z "$OPEN" ]; then gh issue create --title "OUTAGE: MarketRadar check failed" --label outage --body "$(printf '%b' "${BODY//%0A/\n}")"; else gh issue comment "$OPEN" --body "Still failing at $(date -u +%FT%TZ)"; fi
+          else
+            if [ -n "$OPEN" ]; then gh issue comment "$OPEN" --body "Recovered at $(date -u +%FT%TZ). All checks pass." && gh issue close "$OPEN"; fi
+          fi
