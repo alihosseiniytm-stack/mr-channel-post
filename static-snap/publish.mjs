@@ -22,8 +22,8 @@ const EVN = process.env.GITHUB_EVENT_NAME, MIN = new Date().getUTCMinutes();
 function dueNow(p) {
   if (EVN !== "schedule") return true; // manual / local runs refresh everything
   if (p.indexOf("app-i18n") === 0) return MIN < 5; // language packs: hourly
-  if (p.indexOf("whale-leaderboard") === 0 && p.indexOf("window=month") < 0) return MIN % 15 < 5; // other leaderboard windows: 15 min
-  if (p.indexOf("spot-whales") === 0 || p.indexOf("whale-top") === 0) return MIN % 15 < 5;
+  if (p.indexOf("whale-leaderboard") === 0 && p.indexOf("window=month") < 0) return MIN % 30 < 5; // other leaderboard windows: 15 min
+  if (p.indexOf("spot-whales") === 0 || p.indexOf("whale-top") === 0) return MIN % 30 < 5;
   return true;
 }
 await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
@@ -52,7 +52,7 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
 // EXTRA_JSON: per-whale stats for the top leaderboard wallets. Slow-changing, so refreshed only every 15 min (keeps the publisher cheap on the API).
 {
   const ev = process.env.GITHUB_EVENT_NAME;
-  if (!(ev === "schedule" && new Date().getUTCMinutes() % 15 >= 5)) {
+  if (!(ev === "schedule" && new Date().getUTCMinutes() % 30 >= 5)) {
     try {
       const lb = JSON.parse(fs.readFileSync(path.join(OUT, snapName("whale-leaderboard?window=month&limit=500") + ".json"), "utf8"));
       const addrs = (Array.isArray(lb) ? lb : []).map(x => x && (x.wallet || x.address)).filter(Boolean).slice(0, 40);
