@@ -51,8 +51,16 @@ async function sinkNeon() {
   const r = await fetch("https://" + host + "/sql", { method: "POST", headers: { "neon-connection-string": C, "content-type": "application/json" }, body: JSON.stringify({ queries }) });
   return r.ok ? "ok" : "http " + r.status;
 }
-const res = await Promise.allSettled([sinkSupabase(), sinkTurso(), sinkNeon()]);
-console.log("sinks: supabase=" + (res[0].value || res[0].reason) + " turso=" + (res[1].value || res[1].reason) + " neon=" + (res[2].value || res[2].reason));
+async function sinkUpstash() {
+  const U = process.env.UPSTASH_URL, K = process.env.UPSTASH_TOKEN; if (!U || !K) return "skipped";
+  const ev = process.env.GITHUB_EVENT_NAME;
+  if (ev === "schedule" && new Date().getUTCMinutes() % 15 >= 5) return "skipped (every 15 min)";
+  const all = {}; for (const x of ROWS) all[x.name] = x.text;
+  const r = await fetch(U + "/pipeline", { method: "POST", headers: { authorization: "Bearer " + K }, body: JSON.stringify([["SET", "mr_snaps", JSON.stringify({ at: NOW, snaps: all }), "EX", "172800"]]) });
+  return r.ok ? "ok" : "http " + r.status;
+}
+const res = await Promise.allSettled([sinkSupabase(), sinkTurso(), sinkNeon(), sinkUpstash()]);
+console.log("sinks: supabase=" + (res[0].value || res[0].reason) + " turso=" + (res[1].value || res[1].reason) + " neon=" + (res[2].value || res[2].reason) + " upstash=" + (res[3].value || res[3].reason));
 const now = NOW;
 fs.writeFileSync(path.join(process.cwd(), "public", "_headers"),
   "/snap/*\n  Access-Control-Allow-Origin: *\n  Access-Control-Expose-Headers: X-Snap-At\n  X-Snap-At: " + now + "\n  Cache-Control: public, max-age=60\n  Content-Type: application/json; charset=utf-8\n");
