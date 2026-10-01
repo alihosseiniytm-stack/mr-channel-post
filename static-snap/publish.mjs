@@ -6,11 +6,13 @@ import path from "node:path";
 const API = process.env.MR_API || "https://marketradarwhale.com";
 const OUT = path.join(process.cwd(), "public", "snap");
 const FIXED = ["whale-feed", "whale-sentiment", "whale-consensus", "whale-live-positions", "whale-netflow", "whale-clusters",
-  "sol-whales", "sol-whale-clusters", "sol-smart-agree", "heat-coins", "aster-movers", "pump-trending", "pump-graduating", "toman-rate", "sol-follow-list"];
+  "sol-whales", "sol-whale-clusters", "sol-smart-agree", "heat-coins", "aster-movers", "pump-trending", "pump-graduating", "toman-rate", "whale-cards", "signal-track-record", "snipe-signals"];
 const VARIANTS = [];
 for (const w of ["day", "week", "month", "all"]) VARIANTS.push("whale-leaderboard?window=" + w + "&limit=500");
 for (const w of ["1h", "4h", "24h"]) VARIANTS.push("top-movers?window=" + w);
 for (const c of ["eth", "bsc", "base", "arbitrum", "sol", "ton"]) VARIANTS.push("spot-whales?chain=" + c + "&window=24h");
+for (const l of ["en", "fa", "ar", "hi", "id", "ru", "vi"]) VARIANTS.push("app-i18n?lang=" + l);
+for (const d of [7, 30]) VARIANTS.push("whale-top?days=" + d);
 const snapName = (p) => p.replace("?", "~").split("&").join("~").split("=").join("-");
 fs.mkdirSync(OUT, { recursive: true });
 let ok = 0, bad = [];
@@ -27,6 +29,25 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
     ok++;
   } catch (e) { bad.push(p + " (" + e.message + ")"); }
 }));
+
+// EXTRA_JSON: per-whale stats for the top leaderboard wallets. Slow-changing, so refreshed only every 15 min (keeps the publisher cheap on the API).
+{
+  const ev = process.env.GITHUB_EVENT_NAME;
+  if (!(ev === "schedule" && new Date().getUTCMinutes() % 15 >= 5)) {
+    try {
+      const lb = JSON.parse(fs.readFileSync(path.join(OUT, snapName("whale-leaderboard?window=month&limit=500") + ".json"), "utf8"));
+      const addrs = (Array.isArray(lb) ? lb : []).map(x => x && (x.wallet || x.address)).filter(Boolean).slice(0, 40);
+      await Promise.all(addrs.map(async (a) => {
+        try {
+          const p = "whale-stats?addr=" + encodeURIComponent(a);
+          const r = await fetch(API + "/" + p, { headers: { "user-agent": "mr-static-publisher" } });
+          const t = await r.text(); if (!r.ok) return; JSON.parse(t);
+          fs.writeFileSync(path.join(OUT, snapName(p) + ".json"), t); ROWS.push({ name: snapName(p), text: t }); ok++;
+        } catch (e) {}
+      }));
+    } catch (e) { bad.push("whale-stats set (" + e.message + ")"); }
+  }
+}
 
 // SINKS: the same snapshots are also written to independent databases (read fail-over + backups). A sink failing never fails the run.
 const NOW = Date.now();
@@ -55,7 +76,7 @@ async function sinkUpstash() {
   const U = process.env.UPSTASH_URL, K = process.env.UPSTASH_TOKEN; if (!U || !K) return "skipped";
   const ev = process.env.GITHUB_EVENT_NAME;
   if (ev === "schedule" && new Date().getUTCMinutes() % 15 >= 5) return "skipped (every 15 min)";
-  const all = {}; for (const x of ROWS) all[x.name] = x.text;
+  const all = {}; for (const x of ROWS) { if (x.name.indexOf("app-i18n") === 0 || x.name.indexOf("whale-stats") === 0) continue; all[x.name] = x.text; }
   const r = await fetch(U + "/pipeline", { method: "POST", headers: { authorization: "Bearer " + K }, body: JSON.stringify([["SET", "mr_snaps", JSON.stringify({ at: NOW, snaps: all }), "EX", "172800"]]) });
   return r.ok ? "ok" : "http " + r.status;
 }
@@ -70,6 +91,7 @@ async function sinkMongo() {
 }
 const res = await Promise.allSettled([sinkSupabase(), sinkTurso(), sinkNeon(), sinkUpstash(), sinkMongo()]);
 console.log("sinks: supabase=" + (res[0].value || res[0].reason) + " turso=" + (res[1].value || res[1].reason) + " neon=" + (res[2].value || res[2].reason) + " upstash=" + (res[3].value || res[3].reason) + " mongo=" + (res[4].value || res[4].reason));
+
 const now = NOW;
 fs.writeFileSync(path.join(process.cwd(), "public", "_headers"),
   "/snap/*\n  Access-Control-Allow-Origin: *\n  Access-Control-Expose-Headers: X-Snap-At\n  X-Snap-At: " + now + "\n  Cache-Control: public, max-age=60\n  Content-Type: application/json; charset=utf-8\n");
