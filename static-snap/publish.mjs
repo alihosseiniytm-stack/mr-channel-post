@@ -94,7 +94,7 @@ console.log("sinks: supabase=" + (res[0].value || res[0].reason) + " turso=" + (
 
 const now = NOW;
 fs.writeFileSync(path.join(process.cwd(), "public", "_headers"),
-  "/snap/*\n  Access-Control-Allow-Origin: *\n  Access-Control-Expose-Headers: X-Snap-At\n  X-Snap-At: " + now + "\n  Cache-Control: public, max-age=60\n  Content-Type: application/json; charset=utf-8\n");
+  "/vendor/*\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=86400\n/snap/*\n  Access-Control-Allow-Origin: *\n  Access-Control-Expose-Headers: X-Snap-At\n  X-Snap-At: " + now + "\n  Cache-Control: public, max-age=60\n  Content-Type: application/json; charset=utf-8\n");
 fs.writeFileSync(path.join(process.cwd(), "public", "index.html"), "mr-static " + new Date(now).toISOString());
 console.log("published " + ok + " files, failed " + bad.length + (bad.length ? ": " + bad.join("; ") : ""));
 if (ok < 10) process.exit(1);
