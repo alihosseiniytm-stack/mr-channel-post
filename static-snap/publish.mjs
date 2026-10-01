@@ -14,6 +14,7 @@ for (const c of ["eth", "bsc", "base", "arbitrum", "sol", "ton"]) VARIANTS.push(
 const snapName = (p) => p.replace("?", "~").split("&").join("~").split("=").join("-");
 fs.mkdirSync(OUT, { recursive: true });
 let ok = 0, bad = [];
+const ROWS = [];
 await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
   try {
     const r = await fetch(API + "/" + p, { headers: { "user-agent": "mr-static-publisher" } });
@@ -22,10 +23,37 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
     JSON.parse(t);
     if (/"error"\s*:\s*"(unavailable|temporarily unavailable)"/.test(t.slice(0, 400))) throw new Error("unavailable");
     fs.writeFileSync(path.join(OUT, snapName(p) + ".json"), t);
+    ROWS.push({ name: snapName(p), text: t });
     ok++;
   } catch (e) { bad.push(p + " (" + e.message + ")"); }
 }));
-const now = Date.now();
+
+// SINKS: the same snapshots are also written to independent databases (read fail-over + backups). A sink failing never fails the run.
+const NOW = Date.now();
+async function sinkSupabase() {
+  const U = process.env.SUPABASE_URL, K = process.env.SUPABASE_SERVICE; if (!U || !K) return "skipped";
+  const r = await fetch(U + "/rest/v1/snaps?on_conflict=name", { method: "POST", headers: { apikey: K, authorization: "Bearer " + K, "content-type": "application/json", prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(ROWS.map(x => ({ name: x.name, body: JSON.parse(x.text), at: NOW }))) });
+  return r.ok ? "ok" : "http " + r.status;
+}
+async function sinkTurso() {
+  const U = process.env.TURSO_URL, K = process.env.TURSO_TOKEN; if (!U || !K) return "skipped";
+  const reqs = [{ type: "execute", stmt: { sql: "CREATE TABLE IF NOT EXISTS mr_snaps (name TEXT PRIMARY KEY, body TEXT, at INTEGER)" } }];
+  for (const x of ROWS) reqs.push({ type: "execute", stmt: { sql: "INSERT OR REPLACE INTO mr_snaps VALUES (?,?,?)", args: [{ type: "text", value: x.name }, { type: "text", value: x.text }, { type: "integer", value: String(NOW) }] } });
+  reqs.push({ type: "close" });
+  const r = await fetch(U.replace("libsql://", "https://") + "/v2/pipeline", { method: "POST", headers: { authorization: "Bearer " + K, "content-type": "application/json" }, body: JSON.stringify({ requests: reqs }) });
+  return r.ok ? "ok" : "http " + r.status;
+}
+async function sinkNeon() {
+  const C = process.env.NEON_URL; if (!C) return "skipped";
+  const host = C.split("@")[1].split("/")[0];
+  const queries = [{ query: "create table if not exists mr_snaps (name text primary key, body text, at bigint)", params: [] }];
+  for (const x of ROWS) queries.push({ query: "insert into mr_snaps values ($1,$2,$3) on conflict (name) do update set body=excluded.body, at=excluded.at", params: [x.name, x.text, String(NOW)] });
+  const r = await fetch("https://" + host + "/sql", { method: "POST", headers: { "neon-connection-string": C, "content-type": "application/json" }, body: JSON.stringify({ queries }) });
+  return r.ok ? "ok" : "http " + r.status;
+}
+const res = await Promise.allSettled([sinkSupabase(), sinkTurso(), sinkNeon()]);
+console.log("sinks: supabase=" + (res[0].value || res[0].reason) + " turso=" + (res[1].value || res[1].reason) + " neon=" + (res[2].value || res[2].reason));
+const now = NOW;
 fs.writeFileSync(path.join(process.cwd(), "public", "_headers"),
   "/snap/*\n  Access-Control-Allow-Origin: *\n  Access-Control-Expose-Headers: X-Snap-At\n  X-Snap-At: " + now + "\n  Cache-Control: public, max-age=60\n  Content-Type: application/json; charset=utf-8\n");
 fs.writeFileSync(path.join(process.cwd(), "public", "index.html"), "mr-static " + new Date(now).toISOString());
