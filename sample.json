@@ -1,0 +1,17 @@
+{
+  "title": "Market today",
+  "date": "Thu, 1 Oct",
+  "dir": "ltr",
+  "footer": "Live from Hyperliquid. Not financial advice.",
+  "cards": [
+    { "title": "Top gainers (24h)", "rows": [
+      { "name": "SOL", "value": "$142.30", "change": "+6.4%" },
+      { "name": "HYPE", "value": "$38.12", "change": "+4.1%" },
+      { "name": "LIT", "value": "$4.02", "change": "+3.3%" } ] },
+    { "title": "Top losers (24h)", "rows": [
+      { "name": "DOGE", "value": "$0.171", "change": "-3.8%" },
+      { "name": "XRP", "value": "$2.41", "change": "-2.2%" } ] },
+    { "title": "Whale spotlight", "rows": [
+      { "name": "LONG ETH 5x", "value": "$1.4M on the line", "change": "+2.6%" } ] }
+  ]
+}

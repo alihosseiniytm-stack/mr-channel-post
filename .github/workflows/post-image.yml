@@ -1,0 +1,29 @@
+name: channel-image
+on:
+  schedule:
+    - cron: "20 7 * * *"
+    - cron: "20 12 * * *"
+    - cron: "20 17 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: write
+concurrency: channel-image
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y fonts-noto-core fonts-noto-color-emoji
+      - run: npx playwright-core install --with-deps chromium
+      - run: node build_data.mjs en > data.json
+      - run: node render.mjs data.json latest.png
+      - run: echo "{\"at\":$(date +%s000)}" > latest.json
+      - run: |
+          git config user.name "channel-image-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add latest.png latest.json
+          git commit -m "image $(date -u +%FT%TZ)" || exit 0
+          git push
