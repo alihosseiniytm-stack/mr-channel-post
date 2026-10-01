@@ -18,6 +18,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - run: npm install --no-save --silent mongodb
       - run: node publish.mjs
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -27,6 +28,7 @@ jobs:
           NEON_URL: ${{ secrets.NEON_URL }}
           UPSTASH_URL: ${{ secrets.UPSTASH_URL }}
           UPSTASH_TOKEN: ${{ secrets.UPSTASH_TOKEN }}
+          MONGO_URI: ${{ secrets.MONGO_URI }}
       - run: npx --yes wrangler@4 deploy --config wrangler.jsonc
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

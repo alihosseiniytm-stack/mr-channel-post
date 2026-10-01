@@ -59,8 +59,17 @@ async function sinkUpstash() {
   const r = await fetch(U + "/pipeline", { method: "POST", headers: { authorization: "Bearer " + K }, body: JSON.stringify([["SET", "mr_snaps", JSON.stringify({ at: NOW, snaps: all }), "EX", "172800"]]) });
   return r.ok ? "ok" : "http " + r.status;
 }
-const res = await Promise.allSettled([sinkSupabase(), sinkTurso(), sinkNeon(), sinkUpstash()]);
-console.log("sinks: supabase=" + (res[0].value || res[0].reason) + " turso=" + (res[1].value || res[1].reason) + " neon=" + (res[2].value || res[2].reason) + " upstash=" + (res[3].value || res[3].reason));
+async function sinkMongo() {
+  const U = process.env.MONGO_URI; if (!U) return "skipped";
+  let MongoClient; try { ({ MongoClient } = await import("mongodb")); } catch (e) { return "driver missing"; }
+  const c = new MongoClient(U, { serverSelectionTimeoutMS: 15000 });
+  try {
+    await c.db("mr").collection("snaps").bulkWrite(ROWS.map(x => ({ updateOne: { filter: { _id: x.name }, update: { $set: { body: x.text, at: NOW } }, upsert: true } })));
+    return "ok";
+  } finally { try { await c.close(); } catch (e) {} }
+}
+const res = await Promise.allSettled([sinkSupabase(), sinkTurso(), sinkNeon(), sinkUpstash(), sinkMongo()]);
+console.log("sinks: supabase=" + (res[0].value || res[0].reason) + " turso=" + (res[1].value || res[1].reason) + " neon=" + (res[2].value || res[2].reason) + " upstash=" + (res[3].value || res[3].reason) + " mongo=" + (res[4].value || res[4].reason));
 const now = NOW;
 fs.writeFileSync(path.join(process.cwd(), "public", "_headers"),
   "/snap/*\n  Access-Control-Allow-Origin: *\n  Access-Control-Expose-Headers: X-Snap-At\n  X-Snap-At: " + now + "\n  Cache-Control: public, max-age=60\n  Content-Type: application/json; charset=utf-8\n");
