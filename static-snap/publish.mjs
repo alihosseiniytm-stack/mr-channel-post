@@ -6,7 +6,7 @@ import path from "node:path";
 const API = process.env.MR_API || "https://marketradarwhale.com";
 const OUT = path.join(process.cwd(), "public", "snap");
 const FIXED = ["whale-feed", "whale-sentiment", "whale-consensus", "whale-live-positions", "whale-netflow", "whale-clusters",
-  "sol-whales", "sol-whale-clusters", "sol-smart-agree", "heat-coins", "aster-movers", "pump-trending", "pump-graduating", "toman-rate", "whale-cards", "signal-track-record", "snipe-signals"];
+  "sol-whales", "sol-whale-clusters", "sol-smart-agree", "heat-coins", "aster-movers", "pump-trending", "pump-graduating", "toman-rate", "whale-cards", "signal-track-record", "snipe-signals", "pump-smart-all"];
 const VARIANTS = [];
 for (const w of ["day", "week", "month", "all"]) VARIANTS.push("whale-leaderboard?window=" + w + "&limit=500");
 for (const w of ["1h", "4h", "24h"]) VARIANTS.push("top-movers?window=" + w);
@@ -24,6 +24,7 @@ function dueNow(p) {
   if (p.indexOf("app-i18n") === 0) return MIN < 5; // language packs: hourly
   // rankings that change slowly are the heaviest D1 readers: hourly (data that makes the product feel live - prices, feed, positions, clusters, heat - stays on the 5-minute cycle)
   if (p.indexOf("whale-top") === 0) return MIN < 5; // hourly (weekly ranking)
+  if (p === "pump-smart-all") return MIN < 5; // hourly: tracked-wallet counts per mint change slowly
   if (p.indexOf("whale-leaderboard") === 0 && p.indexOf("window=month") < 0) return MIN < 5; // hourly
   if (p.indexOf("spot-whales") === 0) return MIN % 30 < 5; // every 30 min
   return true;
