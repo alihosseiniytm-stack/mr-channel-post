@@ -11,7 +11,7 @@ for (const p of [2, 3, 4]) { await sleep(8000); const m = await J(`https://api.c
 await sleep(8000);
 const list = await J("https://api.coingecko.com/api/v3/coins/list?include_platform=true");
 if (Array.isArray(list) && all.length > 150) {
-  const want = new Set(all.map((c) => c.id)), keep = ["solana", "ethereum", "binance-smart-chain", "robinhood", "base", "arbitrum-one", "polygon-pos", "optimistic-ethereum"];
+  const want = new Set(all.map((c) => c.id)), keep = ["solana", "ethereum", "binance-smart-chain", "robinhood", "base", "arbitrum-one", "polygon-pos", "optimistic-ethereum", "hyperevm", "zksync", "mantle", "linea", "scroll", "avalanche", "sonic", "berachain", "unichain", "blast", "mode", "xdai", "celo", "cronos", "ink", "abstract", "world-chain", "ronin", "flare-network", "kaia", "monad", "sei-v2", "taiko", "moonbeam"];
   const out = {};
   for (const c of list) { if (!want.has(c.id)) continue; const o = {}; for (const k of keep) if (c.platforms && c.platforms[k]) o[k] = c.platforms[k]; out[c.id] = o; }
   fs.writeFileSync("data/platforms.json", JSON.stringify(out));
