@@ -1,0 +1,12 @@
+name: flood-probe
+on:
+  workflow_dispatch: {}
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          seq 1 200 | xargs -P 100 -I{} curl -s -o /dev/null -w "%{http_code}\n" "https://marketradarwhale.com/robots.txt?g={}" | sort | uniq -c | sed 's/^/FLOOD /'
+          curl -s -o /dev/null -w "FLOOD right after: %{http_code}\n" "https://marketradarwhale.com/robots.txt"
+          sleep 14
+          curl -s -o /dev/null -w "FLOOD 14s later: %{http_code}\n" "https://marketradarwhale.com/robots.txt"
