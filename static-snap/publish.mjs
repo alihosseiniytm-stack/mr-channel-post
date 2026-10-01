@@ -15,7 +15,7 @@ for (const l of ["en", "fa", "ar", "hi", "id", "ru", "vi"]) VARIANTS.push("app-i
 for (const d of [7, 30]) VARIANTS.push("whale-top?days=" + d);
 const snapName = (p) => p.replace("?", "~").split("&").join("~").split("=").join("-");
 fs.mkdirSync(OUT, { recursive: true });
-let ok = 0, bad = [];
+let ok = 0, bad = [], kept = [];
 const ROWS = [];
 const STATIC_HOST = process.env.MR_STATIC || "https://mr-static.alihosseini-ytm.workers.dev";
 const EVN = process.env.GITHUB_EVENT_NAME, MIN = new Date().getUTCMinutes();
@@ -38,7 +38,15 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
     fs.writeFileSync(path.join(OUT, snapName(p) + ".json"), t);
     ROWS.push({ name: snapName(p), text: t });
     ok++;
-  } catch (e) { bad.push(p + " (" + e.message + ")"); }
+  } catch (e) {
+    // KEEP_PREVIOUS: a failed refresh must not delete the last good copy
+    try {
+      const pr = await fetch(STATIC_HOST + "/snap/" + snapName(p) + ".json");
+      const pt = pr.ok ? await pr.text() : "";
+      if (pt.length > 1) { JSON.parse(pt); if (!/"error"\s*:\s*"(unavailable|temporarily unavailable)"/.test(pt.slice(0, 400))) { fs.writeFileSync(path.join(OUT, snapName(p) + ".json"), pt); ROWS.push({ name: snapName(p), text: pt }); ok++; kept.push(p); return; } }
+    } catch (e2) {}
+    bad.push(p + " (" + e.message + ", no previous copy)");
+  }
 }));
 
 // EXTRA_JSON: per-whale stats for the top leaderboard wallets. Slow-changing, so refreshed only every 15 min (keeps the publisher cheap on the API).
@@ -107,5 +115,5 @@ const now = NOW;
 fs.writeFileSync(path.join(process.cwd(), "public", "_headers"),
   "/icons/*\n  Cache-Control: public, max-age=86400\n/vendor/*\n  Access-Control-Allow-Origin: *\n  Cache-Control: public, max-age=86400\n/snap/*\n  Access-Control-Allow-Origin: *\n  Access-Control-Expose-Headers: X-Snap-At\n  X-Snap-At: " + now + "\n  Cache-Control: public, max-age=60\n  Content-Type: application/json; charset=utf-8\n");
 fs.writeFileSync(path.join(process.cwd(), "public", "index.html"), "mr-static " + new Date(now).toISOString());
-console.log("published " + ok + " files, failed " + bad.length + (bad.length ? ": " + bad.join("; ") : ""));
+console.log("published " + ok + " files, failed " + bad.length + (bad.length ? ": " + bad.join("; ") : "") + (kept.length ? " | kept previous copy for " + kept.length + ": " + kept.join(", ") : ""));
 if (ok < 10) process.exit(1);
