@@ -17,9 +17,20 @@ const snapName = (p) => p.replace("?", "~").split("&").join("~").split("=").join
 fs.mkdirSync(OUT, { recursive: true });
 let ok = 0, bad = [];
 const ROWS = [];
+const STATIC_HOST = process.env.MR_STATIC || "https://mr-static.alihosseini-ytm.workers.dev";
+const EVN = process.env.GITHUB_EVENT_NAME, MIN = new Date().getUTCMinutes();
+function dueNow(p) {
+  if (EVN !== "schedule") return true; // manual / local runs refresh everything
+  if (p.indexOf("app-i18n") === 0) return MIN < 5; // language packs: hourly
+  if (p.indexOf("whale-leaderboard") === 0 && p.indexOf("window=month") < 0) return MIN % 15 < 5; // other leaderboard windows: 15 min
+  if (p.indexOf("spot-whales") === 0 || p.indexOf("whale-top") === 0) return MIN % 15 < 5;
+  return true;
+}
 await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
   try {
-    const r = await fetch(API + "/" + p, { headers: { "user-agent": "mr-static-publisher" } });
+    let r;
+    if (!dueNow(p)) { try { r = await fetch(STATIC_HOST + "/snap/" + snapName(p) + ".json"); if (!r.ok) r = null; } catch (e) { r = null; } }
+    if (!r) r = await fetch(API + "/" + p, { headers: { "user-agent": "mr-static-publisher" } });
     const t = await r.text();
     if (!r.ok || t.length < 2) throw new Error("status " + r.status);
     JSON.parse(t);
