@@ -55,4 +55,5 @@ jobs:
           mkdir -p ../fb && cp firebase/firebase.json firebase/.firebaserc ../fb/ && mkdir -p ../fb/public && cp -r public/. ../fb/public/ && rm -f ../fb/public/_headers && mkdir -p ../fb/public/trade && cp -r ../docs/trade/. ../fb/public/trade/
           printf %s "$FIREBASE_SA" > ../fb/sa.json
           cd ../fb && GOOGLE_APPLICATION_CREDENTIALS=$PWD/sa.json npx --yes firebase-tools@14 deploy --only hosting --project mr-mirror-61fd2 --non-interactive 2>&1 | tail -6
-          rm -f sa.json
+          cd - >/dev/null && node firestore_sink.mjs ../fb/sa.json public/snap
+          rm -f ../fb/sa.json
