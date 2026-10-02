@@ -29,6 +29,10 @@ function dueNow(p) {
   if (p === "pump-smart-all") return MIN < 2; // hourly: tracked-wallet counts per mint change slowly
   if (p.indexOf("whale-leaderboard") === 0 && p.indexOf("window=month") < 0) return MIN < 2; // hourly
   if (p.indexOf("spot-whales") === 0) return MIN % 30 < 2; // every 30 min
+  if (p === "sol-smart-agree") return MIN % 10 === 0; // its Worker memo is 10 min anyway (25k D1 rows per fresh read)
+  // The 1-minute trigger keeps only the live layer on every run (feed, positions, clusters, pump lists, heat, movers 1h, prices). Everything computed from big D1 tables refreshes every 5 minutes, the old cadence.
+  const LIVE = ["whale-feed", "whale-live-positions", "whale-clusters", "pump-trending", "pump-graduating", "heat-coins", "aster-movers", "toman-rate", "snipe-signals", "top-movers?window=1h"];
+  if (LIVE.indexOf(p) < 0) return MIN % 5 === 0;
   return true;
 }
 await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
