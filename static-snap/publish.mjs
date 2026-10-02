@@ -6,7 +6,7 @@ import path from "node:path";
 const API = process.env.MR_API || "https://marketradarwhale.com";
 const OUT = path.join(process.cwd(), "public", "snap");
 const FIXED = ["whale-feed", "whale-sentiment", "whale-consensus", "whale-live-positions", "whale-netflow", "whale-clusters",
-  "sol-whales", "sol-whale-clusters", "sol-smart-agree", "heat-coins", "aster-movers", "pump-trending", "pump-graduating", "toman-rate", "whale-cards", "signal-track-record", "snipe-signals", "pump-smart-all"];
+  "sol-whales", "sol-whale-clusters", "sol-smart-agree", "heat-coins", "aster-movers", "pump-trending", "pump-graduating", "toman-rate", "whale-cards", "signal-track-record", "snipe-signals", "pump-smart-all", "cg?p=markets"];
 const VARIANTS = [];
 for (const w of ["day", "week", "month", "all"]) VARIANTS.push("whale-leaderboard?window=" + w + "&limit=500");
 for (const w of ["1h", "4h", "24h"]) VARIANTS.push("top-movers?window=" + w);
