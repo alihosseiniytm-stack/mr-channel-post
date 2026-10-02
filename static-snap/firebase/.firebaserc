@@ -15,6 +15,19 @@
           "mr-whale-mirror"
         ]
       }
+    },
+    "mr-mirror-two": {
+      "hosting": {
+        "main": [
+          "mr-two-main"
+        ],
+        "radar": [
+          "mr-two-radar"
+        ],
+        "whale": [
+          "mr-two-whale"
+        ]
+      }
     }
   }
 }
