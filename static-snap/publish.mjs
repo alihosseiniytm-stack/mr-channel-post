@@ -92,7 +92,20 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
   const scale = process.env.CANARY_SCALE === undefined ? 1 : Number(process.env.CANARY_SCALE);
   const live = [];
   await Promise.all(C.map(async (c) => { try { const r = await fetch(c.u + "/snap/app-i18n~lang-en.json", { method: "HEAD", signal: AbortSignal.timeout(5000) }); const lm = Date.parse(r.headers.get("last-modified") || ""); if (r.ok && lm && Date.now() - lm < 2400000) live.push({ u: c.u, p: Math.round(c.p * scale * 100000) / 100000 }); } catch (e) {} }));
-  fs.writeFileSync(path.join(OUT, "routing.json"), JSON.stringify({ v: 1, at: Date.now(), canary: scale > 0 ? live : [] }));
+  // REAL account usage from Cloudflare analytics (the Worker's own usage_daily counter undercounts D1 reads by ~35%): the Worker reads this file for its budget brake. Fails quietly (no pace = old counter logic).
+  let pace = null;
+  try {
+    const tok = process.env.CLOUDFLARE_API_TOKEN, acc = process.env.CLOUDFLARE_ACCOUNT_ID;
+    if (tok && acc) {
+      const now = new Date(), day = now.toISOString().slice(0, 10), S = day + "T00:00:00Z", E = now.toISOString().slice(0, 19) + "Z", H = new Date(now.getTime() - 3600e3).toISOString().slice(0, 19) + "Z";
+      const q = "query { viewer { accounts(filter:{accountTag:\"" + acc + "\"}) { day: d1AnalyticsAdaptiveGroups(limit:50, filter:{datetimeHour_geq:\"" + S + "\", datetimeHour_leq:\"" + E + "\"}) { sum { rowsRead rowsWritten } } hour: d1AnalyticsAdaptiveGroups(limit:50, filter:{datetimeFiveMinutes_geq:\"" + H + "\", datetimeFiveMinutes_leq:\"" + E + "\"}) { sum { rowsRead } } wk: workersInvocationsAdaptive(limit:50, filter:{datetime_geq:\"" + S + "\", datetime_leq:\"" + E + "\"}) { sum { requests } } } } }";
+      const r = await fetch("https://api.cloudflare.com/client/v4/graphql", { method: "POST", headers: { Authorization: "Bearer " + tok, "content-type": "application/json" }, body: JSON.stringify({ query: q }), signal: AbortSignal.timeout(15000) });
+      const a = (await r.json()).data.viewer.accounts[0];
+      const sum = (arr, k) => (arr || []).reduce((t, x) => t + (Number(x.sum[k]) || 0), 0);
+      pace = { day, at: Date.now(), d1_reads: sum(a.day, "rowsRead"), d1_writes: sum(a.day, "rowsWritten"), d1_reads_last_hour: sum(a.hour, "rowsRead"), cf_requests: sum(a.wk, "requests") };
+    }
+  } catch (e) { pace = null; }
+  fs.writeFileSync(path.join(OUT, "routing.json"), JSON.stringify({ v: 1, at: Date.now(), canary: scale > 0 ? live : [], pace }));
 }
 
 // SINKS: the same snapshots are also written to independent databases (read fail-over + backups). A sink failing never fails the run.
