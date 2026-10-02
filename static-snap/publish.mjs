@@ -19,14 +19,16 @@ let ok = 0, bad = [], kept = [];
 const ROWS = [];
 const STATIC_HOST = process.env.MR_STATIC || "https://mr-static.alihosseini-ytm.workers.dev";
 const EVN = process.env.GITHUB_EVENT_NAME, MIN = new Date().getUTCMinutes();
+// The Google Apps Script trigger starts this every minute as workflow_dispatch, so dispatch runs follow the same hourly/30-min gates as schedule runs (MIN < 2: at most two slow refreshes per hour). Set FORCE=1 for a full manual refresh.
+const AUTO = (EVN === "schedule" || EVN === "workflow_dispatch") && !process.env.FORCE;
 function dueNow(p) {
-  if (EVN !== "schedule") return true; // manual / local runs refresh everything
-  if (p.indexOf("app-i18n") === 0) return MIN < 5; // language packs: hourly
+  if (!AUTO) return true; // forced / local runs refresh everything
+  if (p.indexOf("app-i18n") === 0) return MIN < 2; // language packs: hourly
   // rankings that change slowly are the heaviest D1 readers: hourly (data that makes the product feel live - prices, feed, positions, clusters, heat - stays on the 5-minute cycle)
-  if (p.indexOf("whale-top") === 0) return MIN < 5; // hourly (weekly ranking)
-  if (p === "pump-smart-all") return MIN < 5; // hourly: tracked-wallet counts per mint change slowly
-  if (p.indexOf("whale-leaderboard") === 0 && p.indexOf("window=month") < 0) return MIN < 5; // hourly
-  if (p.indexOf("spot-whales") === 0) return MIN % 30 < 5; // every 30 min
+  if (p.indexOf("whale-top") === 0) return MIN < 2; // hourly (weekly ranking)
+  if (p === "pump-smart-all") return MIN < 2; // hourly: tracked-wallet counts per mint change slowly
+  if (p.indexOf("whale-leaderboard") === 0 && p.indexOf("window=month") < 0) return MIN < 2; // hourly
+  if (p.indexOf("spot-whales") === 0) return MIN % 30 < 2; // every 30 min
   return true;
 }
 await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
@@ -54,7 +56,7 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
 
 // EXTRA_JSON / STATS_DUE: per-whale stats for the top leaderboard wallets. Slow-changing: fresh from the API hourly (first 5 minutes of the hour) or on manual runs; on every other run the previous copy is taken from the static host (free) so the files are never dropped from a deploy.
 {
-  const STATS_DUE = EVN !== "schedule" || MIN < 5;
+  const STATS_DUE = !AUTO || MIN < 2;
   try {
     const lb = JSON.parse(fs.readFileSync(path.join(OUT, snapName("whale-leaderboard?window=month&limit=500") + ".json"), "utf8"));
     // top 40 of the month board + every wallet the page shows elsewhere (consensus, cards, top 7/30 days, other boards), capped at 100 so opening one of them never reaches the Worker
