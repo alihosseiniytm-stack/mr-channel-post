@@ -1,0 +1,14 @@
+[Unit]
+Description=MarketRadar snapshot publisher (replaces the GitHub Actions static-snap loop)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mr
+WorkingDirectory=/home/mr/mr-channel-post/vps
+ExecStart=/bin/bash /home/mr/mr-channel-post/vps/publisher_loop.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
