@@ -1,0 +1,20 @@
+name: ws-test
+on: workflow_dispatch
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: |
+          cat > t.mjs <<'EOF'
+          const coins = ["BTC","ETH","SOL","HYPE","XRP","DOGE","SUI","BNB","AVAX","LINK","ARB","PEPE"];
+          const t0 = Date.now(); let n = 0, trades = 0, big = 0; const ws = new WebSocket("wss://api.hyperliquid.xyz/ws");
+          ws.onopen = () => coins.forEach(c => ws.send(JSON.stringify({ method: "subscribe", subscription: { type: "trades", coin: c } })));
+          ws.onmessage = (e) => { n++; try { const m = JSON.parse(e.data); if (m.channel === "trades") for (const t of m.data) { trades++; if (Number(t.px) * Number(t.sz) >= 250000) big++; } } catch (x) {} };
+          ws.onclose = (e) => { console.log("closed", e.code, "after", Date.now() - t0, "ms msgs", n, "trades", trades, "big>=250k", big); process.exit(0); };
+          setTimeout(() => { console.log("at 30s: msgs", n, "trades", trades, "big>=250k", big); ws.close(); setTimeout(() => process.exit(0), 1000); }, 30000);
+          EOF
+          node t.mjs
