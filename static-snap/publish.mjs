@@ -57,7 +57,17 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
   const STATS_DUE = EVN !== "schedule" || MIN < 5;
   try {
     const lb = JSON.parse(fs.readFileSync(path.join(OUT, snapName("whale-leaderboard?window=month&limit=500") + ".json"), "utf8"));
+    // top 40 of the month board + every wallet the page shows elsewhere (consensus, cards, top 7/30 days, other boards), capped at 100 so opening one of them never reaches the Worker
     const addrs = (Array.isArray(lb) ? lb : []).map(x => x && (x.wallet || x.address)).filter(Boolean).slice(0, 40);
+    const seen = new Set(addrs.map(a => String(a).toLowerCase()));
+    for (const sn of ["whale-consensus", "whale-cards", "whale-top?days=7", "whale-top?days=30", "whale-leaderboard?window=week&limit=500", "whale-leaderboard?window=day&limit=500", "whale-leaderboard?window=month&limit=500"]) {
+      try {
+        const txt = fs.readFileSync(path.join(OUT, snapName(sn) + ".json"), "utf8");
+        const lim = sn.indexOf("leaderboard") >= 0 ? 15 : 40; let n = 0;
+        for (const m of txt.match(/0x[a-fA-F0-9]{40}/g) || []) { const k = m.toLowerCase(); if (seen.has(k)) continue; seen.add(k); addrs.push(m); if (++n >= lim || addrs.length >= 100) break; }
+      } catch (e) {}
+      if (addrs.length >= 100) break;
+    }
     await Promise.all(addrs.map(async (a) => {
       const p = "whale-stats?addr=" + encodeURIComponent(a), name = snapName(p);
       const grab = async (url) => { const r = await fetch(url, { headers: { "user-agent": "mr-static-publisher" } }); const t = await r.text(); if (!r.ok) throw new Error("status " + r.status); JSON.parse(t); return t; };
