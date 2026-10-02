@@ -105,7 +105,13 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
       pace = { day, at: Date.now(), d1_reads: sum(a.day, "rowsRead"), d1_writes: sum(a.day, "rowsWritten"), d1_reads_last_hour: sum(a.hour, "rowsRead"), cf_requests: sum(a.wk, "requests") };
     }
   } catch (e) { pace = null; }
-  fs.writeFileSync(path.join(OUT, "routing.json"), JSON.stringify({ v: 1, at: Date.now(), canary: scale > 0 ? live : [], pace }));
+  // API share: independent API hosts for pass-through market data. q grows when Cloudflare Worker requests run ahead of the day (limit 100k/day), never above 0.6; hosts must answer /health.
+  const APIH = ["https://chrcsqsarudhkphujmfx.supabase.co/functions/v1/api", "https://marketradarwhale--a503587abde211f1b3041607ee4eb77e.web.val.run"];
+  const apiLive = [];
+  await Promise.all(APIH.map(async (h) => { try { const r = await fetch(h + "/health", { signal: AbortSignal.timeout(6000) }); if (r.ok) apiLive.push(h); } catch (e) {} }));
+  let q = 0.15;
+  if (pace && pace.cf_requests >= 0) { const hrs = Math.max(2.4, new Date().getUTCHours() + new Date().getUTCMinutes() / 60); const ratio = (pace.cf_requests / 100000) / (hrs / 24); q = Math.min(0.6, Math.max(0.15, 0.15 + 0.5 * Math.max(0, ratio - 0.5))); }
+  fs.writeFileSync(path.join(OUT, "routing.json"), JSON.stringify({ v: 1, at: Date.now(), canary: scale > 0 ? live : [], pace, api: { q: Math.round(q * 1000) / 1000, hosts: apiLive } }));
 }
 
 // SINKS: the same snapshots are also written to independent databases (read fail-over + backups). A sink failing never fails the run.
