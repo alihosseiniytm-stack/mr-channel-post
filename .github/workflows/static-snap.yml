@@ -39,7 +39,7 @@ jobs:
       - name: publish to GitHub Pages (2nd static host, every 15 min; GitHub allows ~10 Pages builds/hour)
         run: |
           M=$(date -u +%M)
-          if [ "${{ github.event_name }}" = "schedule" ] && [ $((10#$M % 15)) -ge 5 ]; then echo "skip (not a 15-min slot)"; exit 0; fi
+          if [ $((10#$M % 15)) -ge 2 ]; then echo "skip (not a 15-min slot; the 1-minute Google trigger arrives as workflow_dispatch)"; exit 0; fi
           cd public && rm -f _headers && touch .nojekyll
           cp -rn ../../docs/. . 2>/dev/null || true   # keep the old /docs mirror URLs working (Pages source moved from main:/docs to gh-pages)
           git init -q -b gh-pages && git config user.name mr-snapshot && git config user.email mr-snapshot@users.noreply.github.com
