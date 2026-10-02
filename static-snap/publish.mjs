@@ -86,6 +86,15 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
   } catch (e) { bad.push("whale-stats set (" + e.message + ")"); }
 }
 
+// ROUTING (owner 2026-10-02: use the reserve hosts live, not only after a failure): routing.json tells browsers which reserve hosts may take a SMALL share of SLOW-data reads (tradeApp mrCanaryPick). A host is listed only when it answers and its copy is < 40 min old, so a dead or stale host gets 0. Shares are small on purpose: Firebase caps at 10 GB/month per project and a disabled Hosting site would cost us the reserve. CANARY_SCALE env scales all shares (0 = off).
+{
+  const C = [{ u: "https://alihosseiniytm-stack.github.io/mr-channel-post", p: 0.02 }].concat(["mr-mirror-61fd2", "mr-radar-mirror", "mr-whale-mirror", "mr-two-main", "mr-two-radar", "mr-two-whale"].map((h) => ({ u: "https://" + h + ".web.app", p: 0.0015 })));
+  const scale = process.env.CANARY_SCALE === undefined ? 1 : Number(process.env.CANARY_SCALE);
+  const live = [];
+  await Promise.all(C.map(async (c) => { try { const r = await fetch(c.u + "/snap/app-i18n~lang-en.json", { method: "HEAD", signal: AbortSignal.timeout(5000) }); const lm = Date.parse(r.headers.get("last-modified") || ""); if (r.ok && lm && Date.now() - lm < 2400000) live.push({ u: c.u, p: Math.round(c.p * scale * 100000) / 100000 }); } catch (e) {} }));
+  fs.writeFileSync(path.join(OUT, "routing.json"), JSON.stringify({ v: 1, at: Date.now(), canary: scale > 0 ? live : [] }));
+}
+
 // SINKS: the same snapshots are also written to independent databases (read fail-over + backups). A sink failing never fails the run.
 const NOW = Date.now();
 async function sinkSupabase() {
