@@ -21,20 +21,22 @@ const STATIC_HOST = process.env.MR_STATIC || "https://mr-static.alihosseini-ytm.
 const EVN = process.env.GITHUB_EVENT_NAME, MIN = new Date().getUTCMinutes();
 // The Google Apps Script trigger starts this every minute as workflow_dispatch, so dispatch runs follow the same hourly/30-min gates as schedule runs (MIN < 2: at most two slow refreshes per hour). Set FORCE=1 for a full manual refresh.
 const AUTO = (EVN === "schedule" || EVN === "workflow_dispatch") && !process.env.FORCE;
-function dueNow(p) {
-  if (!AUTO) return true; // forced / local runs refresh everything
-  if (p.indexOf("app-i18n") === 0) return MIN < 2; // language packs: hourly
-  // rankings that change slowly are the heaviest D1 readers: hourly (data that makes the product feel live - prices, feed, positions, clusters, heat - stays on the 5-minute cycle)
-  if (p.indexOf("whale-top") === 0) return MIN < 2; // hourly (weekly ranking)
-  if (p === "pump-smart-all") return MIN < 2; // hourly: tracked-wallet counts per mint change slowly
-  if (p.indexOf("whale-leaderboard") === 0 && p.indexOf("window=month") < 0) return MIN < 2; // hourly
-  if (p.indexOf("spot-whales") === 0) return MIN % 30 < 2; // every 30 min
-  if (p === "sol-smart-agree") return MIN % 10 === 0; // its Worker memo is 10 min anyway (25k D1 rows per fresh read)
-  // The 1-minute trigger keeps only the live layer on every run (feed, positions, clusters, pump lists, heat, movers 1h, prices). Everything computed from big D1 tables refreshes every 5 minutes, the old cadence.
-  const LIVE = ["whale-feed", "whale-live-positions", "whale-clusters", "pump-trending", "pump-graduating", "heat-coins", "aster-movers", "toman-rate", "snipe-signals", "top-movers?window=1h"];
-  if (LIVE.indexOf(p) < 0) return MIN % 5 === 0;
-  return true;
+// Tier timing comes from a small state file (last refresh per tier), NOT from the minute of the hour: a run takes ~70 s and overlaps the 1-minute trigger, so "minute < 2" fired once or twice per hour at random (it doubled the hourly D1 cost: 80k reads at :00 and 74k at :30).
+let STATE = {};
+try { const sr = await fetch(STATIC_HOST + "/snap/_state.json?t=" + Date.now()); if (sr.ok) STATE = await sr.json(); } catch (e) {}
+const NOW0 = Date.now();
+const TIER_MS = { hourly: 3600e3, spot: 1800e3, ten: 600e3, five: 300e3 };
+const LIVE = ["whale-feed", "whale-live-positions", "whale-clusters", "pump-trending", "pump-graduating", "heat-coins", "aster-movers", "toman-rate", "snipe-signals", "top-movers?window=1h"];
+function tierOf(p) {
+  if (p.indexOf("app-i18n") === 0 || p.indexOf("whale-top") === 0 || p === "pump-smart-all") return "hourly";
+  if (p.indexOf("whale-leaderboard") === 0 && p.indexOf("window=month") < 0) return "hourly";
+  if (p.indexOf("spot-whales") === 0) return "spot";
+  if (p === "sol-smart-agree") return "ten"; // its Worker memo is 10 min anyway
+  if (LIVE.indexOf(p) >= 0) return null; // live layer: every run
+  return "five"; // everything computed from big D1 tables
 }
+const tierDue = {}; for (const t of Object.keys(TIER_MS)) tierDue[t] = !AUTO || !STATE[t] || NOW0 - STATE[t] >= TIER_MS[t] * 0.9;
+function dueNow(p) { if (!AUTO) return true; const t = tierOf(p); return t ? tierDue[t] : true; }
 await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
   try {
     let r;
@@ -60,7 +62,7 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
 
 // EXTRA_JSON / STATS_DUE: per-whale stats for the top leaderboard wallets. Slow-changing: fresh from the API hourly (first 5 minutes of the hour) or on manual runs; on every other run the previous copy is taken from the static host (free) so the files are never dropped from a deploy.
 {
-  const STATS_DUE = !AUTO || MIN < 2;
+  const STATS_DUE = !AUTO || tierDue.hourly;
   try {
     const lb = JSON.parse(fs.readFileSync(path.join(OUT, snapName("whale-leaderboard?window=month&limit=500") + ".json"), "utf8"));
     // top 40 of the month board + every wallet the page shows elsewhere (consensus, cards, top 7/30 days, other boards), capped at 100 so opening one of them never reaches the Worker
@@ -86,6 +88,10 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
   } catch (e) { bad.push("whale-stats set (" + e.message + ")"); }
 }
 
+{
+  const ns = Object.assign({}, STATE); for (const t of Object.keys(TIER_MS)) if (tierDue[t]) ns[t] = NOW0;
+  fs.writeFileSync(path.join(OUT, "_state.json"), JSON.stringify(ns));
+}
 // ROUTING (owner 2026-10-02: use the reserve hosts live, not only after a failure): routing.json tells browsers which reserve hosts may take a SMALL share of SLOW-data reads (tradeApp mrCanaryPick). A host is listed only when it answers and its copy is < 40 min old, so a dead or stale host gets 0. Shares are small on purpose: Firebase caps at 10 GB/month per project and a disabled Hosting site would cost us the reserve. CANARY_SCALE env scales all shares (0 = off).
 {
   const C = [{ u: "https://alihosseiniytm-stack.github.io/mr-channel-post", p: 0.02 }].concat(["mr-mirror-61fd2", "mr-radar-mirror", "mr-whale-mirror", "mr-two-main", "mr-two-radar", "mr-two-whale"].map((h) => ({ u: "https://" + h + ".web.app", p: 0.0015 })));

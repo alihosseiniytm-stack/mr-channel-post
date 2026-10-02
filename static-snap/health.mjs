@@ -14,6 +14,18 @@ const checks = [
 ];
 const SB = process.env.SUPABASE_URL, SBK = process.env.SUPABASE_ANON;
 if (SB && SBK) checks.push(["Supabase snapshot table", async () => { const { r } = await get(SB + "/rest/v1/snaps?name=eq.whale-feed&select=at", { headers: { apikey: SBK } }); if (r.status !== 200) return false; const j = await r.json(); return j.length > 0 && Date.now() - Number(j[0].at) < 30 * 60000; }]);
+// FREE-LIMIT WARNING (owner 2026-10-02): the Cloudflare free daily limits are the real way this site "goes to sleep". routing.json (published every minute) carries the REAL usage; this check fails (GitHub issue + e-mail, like an outage) when the day is heading past a limit: D1 reads projected > 4.5M of 5M, D1 writes projected > 90k of 100k, Worker requests > 70k of 100k. Ignored in the first 3 UTC hours (too early to project).
+checks.push(["LIMIT WARNING: Cloudflare free daily limits (D1 reads/writes, Worker requests)", async () => {
+  const { r } = await get("https://mr-static.alihosseini-ytm.workers.dev/snap/routing.json");
+  const j = await r.json(); const p = j && j.pace; if (!p || Date.now() - Number(p.at) > 1800000) return true; // unknown = not a limit problem
+  const now = new Date(), h = now.getUTCHours() + now.getUTCMinutes() / 60; if (h < 3) return true;
+  const left = 24 - h;
+  const readsEnd = p.d1_reads + (Number(p.d1_reads_last_hour) || 0) * left, writesEnd = p.d1_writes / h * 24;
+  if (readsEnd > 4500000) throw new Error("D1 reads heading to " + Math.round(readsEnd / 1e5) / 10 + "M of 5M (used " + p.d1_reads + ", last hour " + p.d1_reads_last_hour + ")");
+  if (writesEnd > 90000) throw new Error("D1 writes heading to " + Math.round(writesEnd) + " of 100k (used " + p.d1_writes + ")");
+  if (p.cf_requests > 70000) throw new Error("Worker requests " + p.cf_requests + " of 100k");
+  return true;
+}]);
 async function run() { const out = []; for (const [name, fn] of checks) { let ok = false, err = ""; const t0 = Date.now(); try { ok = !!(await fn()); } catch (e) { err = String(e.message || e).slice(0, 80); } out.push({ name, ok, ms: Date.now() - t0, err }); } return out; }
 let res = await run();
 if (res.some((x) => !x.ok)) { await new Promise((r) => setTimeout(r, 20000)); const again = await run(); res = res.map((x, i) => (x.ok ? x : again[i])); }
