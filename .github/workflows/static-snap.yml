@@ -47,6 +47,18 @@ jobs:
           git init -q -b gh-pages && git config user.name mr-snapshot && git config user.email mr-snapshot@users.noreply.github.com
           git add -A && git commit -q -m "snapshots $(date -u +%FT%TZ)"
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
+      - name: publish to Codeberg Pages (Iran-reachable reserve host; only when the owner has created the account + secrets CODEBERG_TOKEN, CODEBERG_REPO)
+        env:
+          CODEBERG_TOKEN: ${{ secrets.CODEBERG_TOKEN }}
+          CODEBERG_REPO: ${{ secrets.CODEBERG_REPO }}
+        run: |
+          M=$(date -u +%M)
+          if [ $((10#$M % 15)) -ge 2 ]; then echo "skip (not a 15-min slot)"; exit 0; fi
+          [ -n "$CODEBERG_TOKEN" ] && [ -n "$CODEBERG_REPO" ] || { echo "no Codeberg secrets yet"; exit 0; }
+          rm -rf ../cb && mkdir -p ../cb && cp -r public/. ../cb/ && rm -f ../cb/_headers && cd ../cb
+          git init -q -b pages && git config user.name mr-snapshot && git config user.email mr-snapshot@users.noreply.codeberg.org
+          git add -A && git commit -q -m "snapshots $(date -u +%FT%TZ)"
+          git push -q -f "https://${CODEBERG_REPO%%/*}:${CODEBERG_TOKEN}@codeberg.org/${CODEBERG_REPO}.git" pages || echo "codeberg push failed"
       - name: publish to Google Firebase Hosting (3 sites, every 15 min)
         env:
           FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
