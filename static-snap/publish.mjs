@@ -129,6 +129,8 @@ async function sinkSupabase() {
 }
 async function sinkTurso() {
   const U = process.env.TURSO_URL, K = process.env.TURSO_TOKEN; if (!U || !K) return "skipped";
+  // 2026-10-09 (read from the Turso console: 3.08M of the 10M monthly row-writes used in 9 days = on track for ~10.6M): one write round per 5 minutes instead of every minute
+  if (new Date().getUTCMinutes() % 5 !== 0) return "skipped (every 5 min)";
   const reqs = [{ type: "execute", stmt: { sql: "CREATE TABLE IF NOT EXISTS mr_snaps (name TEXT PRIMARY KEY, body TEXT, at INTEGER)" } }];
   for (const x of ROWS) reqs.push({ type: "execute", stmt: { sql: "INSERT OR REPLACE INTO mr_snaps VALUES (?,?,?)", args: [{ type: "text", value: x.name }, { type: "text", value: x.text }, { type: "integer", value: String(NOW) }] } });
   reqs.push({ type: "close" });
@@ -137,6 +139,8 @@ async function sinkTurso() {
 }
 async function sinkNeon() {
   const C = process.env.NEON_URL; if (!C) return "skipped";
+  // 2026-10-09 (Neon console: 45 of 100 free compute-hours used in 9 days, a write every minute keeps the compute awake 24/7 -> would run out around day 19): one write per 30 min lets it auto-suspend in between
+  if (new Date().getUTCMinutes() % 30 !== 0) return "skipped (every 30 min)";
   const host = C.split("@")[1].split("/")[0];
   const queries = [{ query: "create table if not exists mr_snaps (name text primary key, body text, at bigint)", params: [] }];
   for (const x of ROWS) queries.push({ query: "insert into mr_snaps values ($1,$2,$3) on conflict (name) do update set body=excluded.body, at=excluded.at", params: [x.name, x.text, String(NOW)] });
