@@ -1,8 +1,8 @@
 name: hl-whales
-# Wide Hyperliquid whale collector (public API, no key). Every 2 hours on purpose (a full pass of ~15k accounts takes ~75 min): GitHub's fair-use is respected (one job, ~7 requests/s against Hyperliquid's 20/s limit, 1 job at a time).
+# Wide Hyperliquid whale collector (public API, no key). Every 6 hours on purpose (keeps GitHub fair-use: about 75 min of a single runner per 6 h) (a full pass of ~15k accounts takes ~75 min): GitHub's fair-use is respected (one job, ~7 requests/s against Hyperliquid's 20/s limit, 1 job at a time).
 on:
   schedule:
-    - cron: "17 */2 * * *"
+    - cron: "17 */6 * * *"
   workflow_dispatch: {}
 concurrency:
   group: hl-whales
