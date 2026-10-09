@@ -26,6 +26,36 @@ checks.push(["LIMIT WARNING: Cloudflare free daily limits (D1 reads/writes, Work
   if (p.cf_requests > 70000) throw new Error("Worker requests " + p.cf_requests + " of 100k");
   return true;
 }]);
+// ---- 2026-10-09 additions: payment safety + security regressions (a failed check = GitHub issue + Telegram push) ----
+const FEE = { evm: "0x09743d908F801A630b584ED1572F31B882DE0D7C", sol: "71tvaAHnBtBJyHnzYypJp838WHgUE1YhJd6reTBcoScJ", trx: "TSQ1MQdjjtxxQGtGfrTFA2Uk9vUsh97RJi", ton: "UQAJxvRMPmYezn2yGZNZg4XVIzWITk26uf1vmJBGK2A-nRHH" };
+checks.push(["PAYMENT: bot payment config serves OUR fee addresses (hijack check)", async () => {
+  const { r } = await get("https://whale-alert-bot.alihosseini-ytm.workers.dev/crypto-pay-config"); if (r.status !== 200) return false;
+  const c = (await r.json()).chains || {};
+  const want = { sol: FEE.sol, bnb: FEE.evm, eth: FEE.evm, arb: FEE.evm, base: FEE.evm, trx: FEE.trx, ton: FEE.ton };
+  for (const k of Object.keys(want)) if (!c[k] || c[k].to !== want[k]) throw new Error("address changed for " + k);
+  return true;
+}]);
+checks.push(["PAYMENT: /trade page still contains our fee addresses", async () => {
+  const { r } = await get("https://marketradarwhale.com/trade"); const h = await r.text();
+  for (const k of Object.keys(FEE)) if (h.indexOf(FEE[k]) < 0) throw new Error(k + " fee address missing");
+  return true;
+}]);
+checks.push(["SECURITY: owner API refuses strangers (must be 403)", async () => {
+  for (const p of ["admin-data", "admin-sessions", "admin-toggle", "admin-overview"]) { const { r } = await get("https://marketradarwhale.com/" + p, { method: "POST", headers: { "content-type": "application/json" }, body: "{}" }); if (r.status === 200) throw new Error(p + " answered 200 without login"); }
+  return true;
+}]);
+checks.push(["SECURITY: script origins on key pages stay inside the allow-list", async () => {
+  const ok = new Set(["marketradarwhale.com", "telegram.org", "accounts.google.com", "cdn.jsdelivr.net", "static.cloudflareinsights.com", "mr-static.alihosseini-ytm.workers.dev"]);
+  for (const u of ["https://marketradarwhale.com/trade", "https://marketradarwhale.com/fa/account/", "https://marketradarwhale.com/fa/login/", "https://marketradarwhale.com/fa/whales/"]) {
+    const { r } = await get(u); const h = await r.text();
+    for (const m of h.matchAll(/<script[^>]*\ssrc="(https?:\/\/[^"\/]+)/g)) { const host = m[1].replace(/^https?:\/\//, ""); if (!ok.has(host)) throw new Error("new script origin " + host + " on " + u); }
+  }
+  return true;
+}]);
+checks.push(["SITE: account + login pages load", async () => {
+  const a = await get("https://marketradarwhale.com/fa/account/"), l = await get("https://marketradarwhale.com/fa/login/");
+  return a.r.status === 200 && l.r.status === 200 && (await a.r.text()).indexOf("ac-kpi") > 0;
+}]);
 async function run() { const out = []; for (const [name, fn] of checks) { let ok = false, err = ""; const t0 = Date.now(); try { ok = !!(await fn()); } catch (e) { err = String(e.message || e).slice(0, 80); } out.push({ name, ok, ms: Date.now() - t0, err }); } return out; }
 let res = await run();
 if (res.some((x) => !x.ok)) { await new Promise((r) => setTimeout(r, 20000)); const again = await run(); res = res.map((x, i) => (x.ok ? x : again[i])); }
