@@ -3,7 +3,8 @@
 // File naming MUST match snapName() in tradeApp.js: path without leading slash, then ~ before the query, & -> ~, = -> -
 import fs from "node:fs";
 import path from "node:path";
-const API = process.env.MR_API || "https://marketradarwhale.com";
+// 2026-10-09: Cloudflare showed ~51k Worker requests/day with ZERO real users (cap 100k). This job runs every minute and used to (1) fetch the live endpoints through marketradarwhale.com (site Worker + bot Worker = 2 requests each) and (2) read the previous copy of every non-due file from the mr-static Worker (~30 requests/min). Now: live endpoints go straight to the bot Worker, previous copies come from GitHub Pages (not Cloudflare).
+const API = process.env.MR_API || "https://whale-alert-bot.alihosseini-ytm.workers.dev";
 const OUT = path.join(process.cwd(), "public", "snap");
 const FIXED = ["whale-feed", "whale-sentiment", "whale-consensus", "whale-live-positions", "whale-netflow", "whale-clusters",
   "sol-whales", "sol-whale-clusters", "sol-smart-agree", "heat-coins", "aster-movers", "pump-trending", "pump-graduating", "toman-rate", "whale-cards", "signal-track-record", "snipe-signals", "pump-smart-all", "cg?p=markets", "big-transfers"];
@@ -18,12 +19,13 @@ fs.mkdirSync(OUT, { recursive: true });
 let ok = 0, bad = [], kept = [];
 const ROWS = [];
 const STATIC_HOST = process.env.MR_STATIC || "https://mr-static.alihosseini-ytm.workers.dev";
+const READ_HOST = process.env.MR_READ || "https://alihosseiniytm-stack.github.io/mr-channel-post";
 const EVN = process.env.GITHUB_EVENT_NAME, MIN = new Date().getUTCMinutes();
 // The Google Apps Script trigger starts this every minute as workflow_dispatch, so dispatch runs follow the same hourly/30-min gates as schedule runs (MIN < 2: at most two slow refreshes per hour). Set FORCE=1 for a full manual refresh.
 const AUTO = (EVN === "schedule" || EVN === "workflow_dispatch") && !process.env.FORCE;
 // Tier timing comes from a small state file (last refresh per tier), NOT from the minute of the hour: a run takes ~70 s and overlaps the 1-minute trigger, so "minute < 2" fired once or twice per hour at random (it doubled the hourly D1 cost: 80k reads at :00 and 74k at :30).
 let STATE = {};
-try { const sr = await fetch(STATIC_HOST + "/snap/_state.json?t=" + Date.now()); if (sr.ok) STATE = await sr.json(); } catch (e) {}
+try { const sr = await fetch(READ_HOST + "/snap/_state.json?t=" + Date.now()); if (sr.ok) STATE = await sr.json(); } catch (e) {}
 const NOW0 = Date.now();
 const TIER_MS = { hourly: 3600e3, spot: 1800e3, ten: 600e3, five: 300e3 };
 const LIVE = ["whale-feed", "whale-live-positions", "whale-clusters", "pump-trending", "pump-graduating", "heat-coins", "aster-movers", "toman-rate", "snipe-signals", "top-movers?window=1h"];
@@ -40,7 +42,7 @@ function dueNow(p) { if (!AUTO) return true; const t = tierOf(p); return t ? tie
 await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
   try {
     let r;
-    if (!dueNow(p)) { try { r = await fetch(STATIC_HOST + "/snap/" + snapName(p) + ".json"); if (!r.ok) r = null; } catch (e) { r = null; } }
+    if (!dueNow(p)) { try { r = await fetch(READ_HOST + "/snap/" + snapName(p) + ".json"); if (!r.ok) r = null; } catch (e) { r = null; } }
     if (!r) r = await fetch(API + "/" + p, { headers: { "user-agent": "mr-static-publisher" } });
     const t = await r.text();
     if (!r.ok || t.length < 2) throw new Error("status " + r.status);
@@ -52,7 +54,7 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
   } catch (e) {
     // KEEP_PREVIOUS: a failed refresh must not delete the last good copy
     try {
-      const pr = await fetch(STATIC_HOST + "/snap/" + snapName(p) + ".json");
+      const pr = await fetch(READ_HOST + "/snap/" + snapName(p) + ".json");
       const pt = pr.ok ? await pr.text() : "";
       if (pt.length > 1) { JSON.parse(pt); if (!/"error"\s*:\s*"(unavailable|temporarily unavailable)"/.test(pt.slice(0, 400))) { fs.writeFileSync(path.join(OUT, snapName(p) + ".json"), pt); ROWS.push({ name: snapName(p), text: pt }); ok++; kept.push(p); return; } }
     } catch (e2) {}
@@ -80,8 +82,8 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
       const p = "whale-stats?addr=" + encodeURIComponent(a), name = snapName(p);
       const grab = async (url) => { const r = await fetch(url, { headers: { "user-agent": "mr-static-publisher" } }); const t = await r.text(); if (!r.ok) throw new Error("status " + r.status); JSON.parse(t); return t; };
       let t = null;
-      try { t = await grab(STATS_DUE ? API + "/" + p : STATIC_HOST + "/snap/" + name + ".json"); } catch (e) {}
-      if (!t) { try { t = await grab(STATS_DUE ? STATIC_HOST + "/snap/" + name + ".json" : API + "/" + p); } catch (e) {} }
+      try { t = await grab(STATS_DUE ? API + "/" + p : READ_HOST + "/snap/" + name + ".json"); } catch (e) {}
+      if (!t) { try { t = await grab(STATS_DUE ? READ_HOST + "/snap/" + name + ".json" : API + "/" + p); } catch (e) {} }
       if (!t) return;
       fs.writeFileSync(path.join(OUT, name + ".json"), t); ROWS.push({ name, text: t }); ok++;
     }));
