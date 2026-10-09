@@ -146,7 +146,7 @@ async function sinkNeon() {
 async function sinkUpstash() {
   const U = process.env.UPSTASH_URL, K = process.env.UPSTASH_TOKEN; if (!U || !K) return "skipped";
   // 2026-10-08: Upstash Free = 10 GB/month bandwidth and warned at 7 GB. The 1-minute trigger arrives as workflow_dispatch (not "schedule"), so the old schedule-only throttle never applied -> one ~150 KB write per minute. Throttle by clock for every event: one write per 15 min (it is only a fallback sink).
-  if (new Date().getUTCMinutes() % 15 >= 2) return "skipped (every 15 min)";
+  if (new Date().getUTCMinutes() % 30 !== 0) return "skipped (every 30 min)"; // the mr_snaps value is ~950 KB (measured 2026-10-09 with STRLEN), so one write per 30 min = ~1.4 GB/month of the 10 GB free bandwidth
   const all = {}; for (const x of ROWS) { if (x.name.indexOf("app-i18n") === 0 || x.name.indexOf("whale-stats") === 0) continue; all[x.name] = x.text; }
   const r = await fetch(U + "/pipeline", { method: "POST", headers: { authorization: "Bearer " + K }, body: JSON.stringify([["SET", "mr_snaps", JSON.stringify({ at: NOW, snaps: all }), "EX", "172800"]]) });
   return r.ok ? "ok" : "http " + r.status;
