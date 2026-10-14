@@ -11,13 +11,13 @@ if (!TURSO_URL || !TURSO_TOKEN) { console.log("TURSO_URL / TURSO_TOKEN missing")
 
 async function turso(stmts) {
   const requests = stmts.map((s) => ({ type: "execute", stmt: { sql: s[0], args: (s[1] || []).map((v) => (v == null ? { type: "null" } : typeof v === "number" ? { type: Number.isInteger(v) ? "integer" : "float", value: Number.isInteger(v) ? String(v) : v } : { type: "text", value: String(v) })) } })).concat([{ type: "close" }]);
-  for (let a = 0; a < 3; a++) {
+  for (let a = 0; a < 5; a++) {
     try {
-      const r = await fetch(TURSO_URL + "/v2/pipeline", { method: "POST", headers: { authorization: "Bearer " + TURSO_TOKEN, "content-type": "application/json" }, body: JSON.stringify({ requests }), signal: AbortSignal.timeout(60000) });
+      const r = await fetch(TURSO_URL + "/v2/pipeline", { method: "POST", headers: { authorization: "Bearer " + TURSO_TOKEN, "content-type": "application/json" }, body: JSON.stringify({ requests }), signal: AbortSignal.timeout(120000) });
       if (!r.ok) throw new Error("turso " + r.status + " " + (await r.text()).slice(0, 120));
       const j = await r.json(); for (const x of j.results) if (x.type === "error") throw new Error("turso stmt " + JSON.stringify(x.error).slice(0, 160));
       return j.results;
-    } catch (e) { if (a === 2) throw e; await sleep(1500 * (a + 1)); }
+    } catch (e) { if (a === 4) throw e; await sleep(2000 * (a + 1)); }
   }
 }
 const val = (c) => (c && c.type !== "null" ? c.value : null);
@@ -67,7 +67,7 @@ const ex = new Map();
 const exW = new Map();
 { const res = (await turso([["SELECT wallet, coin, szi, entry, lev, liq FROM hl_positions"]]))[0].response.result.rows; for (const r of res) { ex.set(val(r[0]) + "|" + val(r[1]), { szi: Number(val(r[2])), entry: Number(val(r[3])) }); (exW.get(val(r[0])) || exW.set(val(r[0]), []).get(val(r[0]))).push(val(r[1])); } }
 const stmts = []; let scanned = 0, failed = 0, posNow = 0, changed = 0, removed = 0;
-const flush = async () => { while (stmts.length) await turso(stmts.splice(0, 300)); };
+const flush = async () => { while (stmts.length) await turso(stmts.splice(0, 150)); };
 const queue = targets.slice(); const gap = 1000 / RPS; let nextAt = Date.now();
 async function worker() {
   while (queue.length) {
