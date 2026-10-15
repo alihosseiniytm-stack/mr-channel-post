@@ -1,0 +1,45 @@
+name: surge-check
+
+# Every 5 minutes: read today's Workers request count from Cloudflare and write the SURGE level (0/1/2) into the site's KV (PRICE_CACHE key "surge").
+# The site worker multiplies its public cache TTLs by 1 / 4 / 10 (see crypto-site-deploy/src/worker.js, surgeMul). KV is only written when the level changes.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: surge-check
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Compute level and update KV if it changed
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          KV_NS: 283e56075cce49e9ac603549518df11f
+        run: |
+          set -e
+          D=$(date -u +%F)
+          Q="{\"query\":\"query { viewer { accounts(filter:{accountTag:\\\"$CF_ACCOUNT\\\"}) { w: workersInvocationsAdaptive(limit:50, filter:{date_geq:\\\"$D\\\", date_leq:\\\"$D\\\"}) { sum { requests } } } } }\"}"
+          R=$(curl -s -m 30 https://api.cloudflare.com/client/v4/graphql -H "authorization: Bearer $CF_TOKEN" -H "content-type: application/json" --data "$Q")
+          TOTAL=$(echo "$R" | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{const a=JSON.parse(s).data.viewer.accounts[0].w;console.log(a.reduce((n,x)=>n+x.sum.requests,0))}catch(e){console.log(-1)}})")
+          echo "workers requests today: $TOTAL"
+          if [ "$TOTAL" = "-1" ]; then echo "could not read analytics, leaving the level unchanged"; exit 0; fi
+          CUR=$(curl -s -m 20 "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/storage/kv/namespaces/$KV_NS/values/surge" -H "authorization: Bearer $CF_TOKEN" || true)
+          case "$CUR" in 1|2) CURL_LVL=$CUR;; *) CURL_LVL=0;; esac
+          # hysteresis: switch on at 70k/85k, switch back only below 55k/70k
+          NEW=$CURL_LVL
+          if [ "$TOTAL" -ge 85000 ]; then NEW=2
+          elif [ "$TOTAL" -ge 70000 ]; then if [ "$CURL_LVL" -lt 1 ]; then NEW=1; fi; if [ "$CURL_LVL" = 2 ] && [ "$TOTAL" -lt 80000 ]; then NEW=1; fi
+          elif [ "$TOTAL" -lt 55000 ]; then NEW=0
+          fi
+          echo "level: $CURL_LVL -> $NEW"
+          if [ "$NEW" != "$CURL_LVL" ]; then
+            curl -s -m 20 -X PUT "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/storage/kv/namespaces/$KV_NS/values/surge" -H "authorization: Bearer $CF_TOKEN" --data "$NEW" | head -c 200; echo
+          fi
