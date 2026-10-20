@@ -20,6 +20,8 @@ jobs:
           node-version: 20
       - name: collect
         env:
+          WH_URL: ${{ secrets.WH_URL }}
+          WH_TOKEN: ${{ secrets.WH_TOKEN }}
           NEON_URL: ${{ secrets.NEON_URL }}
           TURSO_URL: ${{ secrets.TURSO_URL }}
           TURSO_TOKEN: ${{ secrets.TURSO_TOKEN }}
