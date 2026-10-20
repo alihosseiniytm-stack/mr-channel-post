@@ -20,6 +20,7 @@ jobs:
           node-version: 20
       - name: collect
         env:
+          NEON_URL: ${{ secrets.NEON_URL }}
           TURSO_URL: ${{ secrets.TURSO_URL }}
           TURSO_TOKEN: ${{ secrets.TURSO_TOKEN }}
           MIN_ACCT: "100000"

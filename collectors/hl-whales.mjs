@@ -7,9 +7,29 @@
 const TURSO_URL = (process.env.TURSO_URL || "").replace(/^libsql:/, "https:"), TURSO_TOKEN = process.env.TURSO_TOKEN || "";
 const MIN_ACCT = Number(process.env.MIN_ACCT || 100000), MAX_WALLETS = Number(process.env.MAX_WALLETS || 8000), RPS = Number(process.env.RPS || 8);
 const T0 = Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-if (!TURSO_URL || !TURSO_TOKEN) { console.log("TURSO_URL / TURSO_TOKEN missing"); process.exit(1); }
+// 2026-10-21: Turso free reads were exhausted for the month (BLOCKED until Nov 1) -> warehouse moves to Neon (Postgres over HTTP). NEON_URL set = Neon; otherwise Turso as before. Same call shape, SQL is translated here.
+const NEON_URL = process.env.NEON_URL || "";
+if (!NEON_URL && (!TURSO_URL || !TURSO_TOKEN)) { console.log("NEON_URL or TURSO_URL / TURSO_TOKEN missing"); process.exit(1); }
+const NEON_DDL = {
+  "CREATE TABLE IF NOT EXISTS hl_wallets": "CREATE TABLE IF NOT EXISTS hl_wallets (wallet text PRIMARY KEY, acct double precision, pnl_d double precision, pnl_w double precision, pnl_m double precision, pnl_a double precision, vlm_m double precision, name text, updated bigint)",
+  "CREATE TABLE IF NOT EXISTS hl_positions": 'CREATE TABLE IF NOT EXISTS hl_positions (wallet text NOT NULL, coin text NOT NULL, szi double precision NOT NULL, entry double precision, lev double precision, liq double precision, "cross" integer, seen bigint NOT NULL, PRIMARY KEY (wallet, coin))',
+};
+function neonSql(sql) { for (const k of Object.keys(NEON_DDL)) if (sql.startsWith(k)) return NEON_DDL[k]; let n = 0; return sql.replace(/\?/g, () => "$" + ++n).replace(/\bcross\b/g, '"cross"'); }
+async function neon(stmts) {
+  const host = NEON_URL.split("@")[1].split("/")[0];
+  const queries = stmts.map((s) => ({ query: neonSql(s[0]), params: (s[1] || []).map((v) => (v == null ? null : v)) }));
+  for (let a = 0; a < 5; a++) {
+    try {
+      const r = await fetch("https://" + host + "/sql", { method: "POST", headers: { "neon-connection-string": NEON_URL, "content-type": "application/json", "Neon-Raw-Text-Output": "true", "Neon-Array-Mode": "true" }, body: JSON.stringify({ queries }), signal: AbortSignal.timeout(120000) });
+      const j = await r.json();
+      if (!r.ok) throw new Error("neon " + r.status + " " + JSON.stringify(j).slice(0, 160));
+      return j.results.map((x) => ({ type: "ok", response: { result: { rows: (x.rows || []).map((row) => row.map((c) => (c == null ? { type: "null" } : { type: "text", value: String(c) }))) } } }));
+    } catch (e) { if (a === 4) throw e; await sleep(2000 * (a + 1)); }
+  }
+}
 
 async function turso(stmts) {
+  if (NEON_URL) return neon(stmts);
   const requests = stmts.map((s) => ({ type: "execute", stmt: { sql: s[0], args: (s[1] || []).map((v) => (v == null ? { type: "null" } : typeof v === "number" ? { type: Number.isInteger(v) ? "integer" : "float", value: Number.isInteger(v) ? String(v) : v } : { type: "text", value: String(v) })) } })).concat([{ type: "close" }]);
   for (let a = 0; a < 5; a++) {
     try {
