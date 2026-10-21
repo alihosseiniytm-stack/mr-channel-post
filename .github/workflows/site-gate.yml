@@ -1,0 +1,51 @@
+name: site-gate
+# Daily integrity gate: every sitemap page of marketradarwhale.com must match its family (CSS/JS set, header, language menu, charset, viewport).
+# Canonical script: whale-alert-worker/tools/site_consistency_audit.mjs (+ site_families.expected.json). site-gate/ holds the copy CI runs:
+# after changing the baseline there, copy both files here too.
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: site-gate
+  cancel-in-progress: false
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: run gate (slow: concurrency 3, 429-safe)
+        id: g
+        continue-on-error: true
+        run: node site-gate/site_consistency_audit.mjs --out=site-gate/rows.json --report=site-gate/report.md
+      - name: alert via GitHub Issue (+ Telegram when the bot secrets exist)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONITOR_BOT_TOKEN: ${{ secrets.MONITOR_BOT_TOKEN }}
+          MONITOR_CHAT_ID: ${{ secrets.MONITOR_CHAT_ID }}
+        run: |
+          OPEN=$(gh issue list --label site-gate --state open --json number -q '.[0].number' || true)
+          if [ "${{ steps.g.outcome }}" = "failure" ]; then
+            BODY="Site integrity gate FAILED at $(date -u +%FT%TZ).
+
+          $(head -c 6000 site-gate/report.md 2>/dev/null || echo 'no report (sitemap unreachable?)')"
+            gh label create site-gate --color D93F0B --description "site consistency gate" 2>/dev/null || true
+            if [ -z "$OPEN" ]; then
+              gh issue create --title "SITE GATE: pages differ from their family" --label site-gate --body "$BODY"
+              if [ -n "$MONITOR_BOT_TOKEN" ] && [ -n "$MONITOR_CHAT_ID" ]; then
+                curl -s -m 20 "https://api.telegram.org/bot$MONITOR_BOT_TOKEN/sendMessage" --data-urlencode "chat_id=$MONITOR_CHAT_ID" --data-urlencode "text=🚨 دروازهٔ یکپارچگی سایت: صفحه‌ای با خانوادهٔ خود نمی‌خواند. جزئیات: Issue «SITE GATE» در مخزن mr-channel-post" >/dev/null || true
+              fi
+            else
+              gh issue comment "$OPEN" --body "Still failing at $(date -u +%FT%TZ)"
+            fi
+            exit 1
+          else
+            if [ -n "$OPEN" ]; then gh issue comment "$OPEN" --body "Recovered at $(date -u +%FT%TZ)." && gh issue close "$OPEN"; fi
+          fi

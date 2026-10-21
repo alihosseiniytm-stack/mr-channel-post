@@ -1,0 +1,404 @@
+{
+ "generated": "2026-10-20",
+ "note": "expected = most common asset set per family; deviations of a family are listed in knownDeviations with a reason, NEVER hidden by editing css/js",
+ "families": {
+  "home": {
+   "pages": 1,
+   "css": [
+    "home.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/",
+   "knownDeviations": {}
+  },
+  "legacy-static": {
+   "pages": 53,
+   "css": [
+    "nav.*.css",
+    "skin.*.css",
+    "tokens.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/about/",
+   "knownDeviations": {
+    "css:guides.*.css+nav.*.css+tokens.*.css": {
+     "reason": "family served with a different CSS stack than its majority (two generators/builds) - S0 baseline 2026-10-21; removed by S1 shell migration",
+     "pages": 7,
+     "example": "/ar/guides/"
+    }
+   }
+  },
+  "home-lang": {
+   "pages": 6,
+   "css": [
+    "home.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/ar/",
+   "knownDeviations": {}
+  },
+  "article": {
+   "pages": 370,
+   "css": [
+    "guides.*.css",
+    "nav.*.css",
+    "tokens.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/ar/bitcoin-whales/",
+   "knownDeviations": {
+    "css:nav.*.css+skin.*.css+tokens.*.css": {
+     "reason": "family served with a different CSS stack than its majority (two generators/builds) - S0 baseline 2026-10-21; removed by S1 shell migration",
+     "pages": 83,
+     "example": "/ar/free-crypto-signals/"
+    }
+   }
+  },
+  "whales-hub": {
+   "pages": 56,
+   "css": [
+    "nav.*.css",
+    "skin.*.css",
+    "tokens.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/ar/pumps/",
+   "knownDeviations": {
+    "status:404": {
+     "reason": "sitemap lists a URL that returns 404 - found by S0 audit 2026-10-21; fix sitemap or build the page",
+     "pages": 14,
+     "example": "/ar/pumps/"
+    },
+    "css:guides.*.css+nav.*.css+tokens.*.css": {
+     "reason": "family served with a different CSS stack than its majority (two generators/builds) - S0 baseline 2026-10-21; removed by S1 shell migration",
+     "pages": 7,
+     "example": "/ar/solana-whales/"
+    },
+    "css:nav.*.css+tokens.*.css": {
+     "reason": "family served with a different CSS stack than its majority (two generators/builds) - S0 baseline 2026-10-21; removed by S1 shell migration",
+     "pages": 14,
+     "example": "/ar/whale/"
+    }
+   }
+  },
+  "whales-coin": {
+   "pages": 28,
+   "css": [
+    "nav.*.css",
+    "tokens.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/ar/whales/bnb/",
+   "knownDeviations": {}
+  },
+  "learn-index": {
+   "pages": 7,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/",
+   "knownDeviations": {}
+  },
+  "learn/best": {
+   "pages": 13,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/best/no-kyc-exchanges",
+   "knownDeviations": {}
+  },
+  "learn/blog": {
+   "pages": 51,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/blog/",
+   "knownDeviations": {}
+  },
+  "learn/brokers": {
+   "pages": 84,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/brokers/alpari",
+   "knownDeviations": {}
+  },
+  "learn/coins": {
+   "pages": 1408,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/coins/",
+   "knownDeviations": {}
+  },
+  "learn/countries": {
+   "pages": 83,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/countries/afghanistan",
+   "knownDeviations": {}
+  },
+  "learn/exchanges": {
+   "pages": 105,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/exchanges/binance",
+   "knownDeviations": {}
+  },
+  "learn/faq": {
+   "pages": 7,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/faq",
+   "knownDeviations": {}
+  },
+  "learn/glossary": {
+   "pages": 7,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/glossary",
+   "knownDeviations": {}
+  },
+  "learn/pump-fun-whales": {
+   "pages": 7,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/pump-fun-whales",
+   "knownDeviations": {}
+  },
+  "learn/rankings": {
+   "pages": 7,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/rankings",
+   "knownDeviations": {}
+  },
+  "learn/stocks": {
+   "pages": 252,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/stocks/",
+   "knownDeviations": {}
+  },
+  "learn/terms": {
+   "pages": 140,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/terms/ath",
+   "knownDeviations": {
+    "status:301": {
+     "reason": "sitemap lists a URL that redirects (not 200) - found by S0 audit 2026-10-21; fix sitemap or page",
+     "pages": 42,
+     "example": "/learn/ar/terms/ath"
+    }
+   }
+  },
+  "learn/whale-bot": {
+   "pages": 7,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/ar/whale-bot",
+   "knownDeviations": {}
+  },
+  "learn/today": {
+   "pages": 10,
+   "css": [
+    "nav.*.css",
+    "tokens.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/en/today/bitcoin",
+   "knownDeviations": {}
+  },
+  "learn/domestic-exchanges": {
+   "pages": 1,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/fa/domestic-exchanges",
+   "knownDeviations": {}
+  },
+  "learn/vip": {
+   "pages": 1,
+   "css": [
+    "site.*.css",
+    "skin.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/learn/fa/vip",
+   "knownDeviations": {}
+  },
+  "trade": {
+   "pages": 42,
+   "css": [
+    "nav.*.css",
+    "skin.*.css",
+    "tokens.*.css"
+   ],
+   "js": [
+    "site.*.js",
+    "wbar.*.js"
+   ],
+   "header": true,
+   "lang": true,
+   "example": "/trade/ar/aster/",
+   "knownDeviations": {}
+  }
+ }
+}
