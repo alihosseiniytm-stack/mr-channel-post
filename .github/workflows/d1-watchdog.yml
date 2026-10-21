@@ -1,0 +1,59 @@
+name: d1-watchdog
+# D1 circuit breaker (Part A). Every 15 min: real D1 rows read (all DBs of the account) -> trip at >1M in the current hour or >3.5M/day:
+# sets KV WHALE_KV d1_pause=1 (expires 00:05Z next day; Part B in the Worker honours it) + alert (GitHub Issue, + Telegram if secrets exist).
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: "dry run (never writes the KV flag)"
+        default: "true"
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: d1-watchdog
+  cancel-in-progress: false
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: measure + trip
+        id: w
+        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          DRYFLAG=""; if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry }}" = "true" ]; then DRYFLAG="--dry"; fi
+          node d1-watchdog/d1_watchdog.mjs $DRYFLAG | tee w.log
+      - name: alert
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONITOR_BOT_TOKEN: ${{ secrets.MONITOR_BOT_TOKEN }}
+          MONITOR_CHAT_ID: ${{ secrets.MONITOR_CHAT_ID }}
+        run: |
+          RES=$(grep '^RESULT ' w.log | tail -1 | sed 's/^RESULT //'); [ -z "$RES" ] && RES='{"status":"error","msg":"no result"}'
+          ST=$(echo "$RES" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).status))')
+          OPEN=$(gh issue list --label d1-guard --state open --json number -q '.[0].number' || true)
+          if [ "$ST" = "ok" ]; then
+            if [ -n "$OPEN" ]; then gh issue comment "$OPEN" --body "D1 usage back to normal at $(date -u +%FT%TZ). $RES" && gh issue close "$OPEN"; fi
+          else
+            gh label create d1-guard --color B60205 --description "D1 read cap guard" 2>/dev/null || true
+            TITLE="D1 GUARD: $ST"
+            if [ -z "$OPEN" ]; then
+              gh issue create --title "$TITLE" --label d1-guard --body "$(date -u +%FT%TZ)  $RES"
+              if [ -n "$MONITOR_BOT_TOKEN" ] && [ -n "$MONITOR_CHAT_ID" ]; then
+                curl -s -m 20 "https://api.telegram.org/bot$MONITOR_BOT_TOKEN/sendMessage" --data-urlencode "chat_id=$MONITOR_CHAT_ID" --data-urlencode "text=🛡️ نگهبان D1: وضعیت $ST. $RES" >/dev/null || true
+              fi
+            else
+              gh issue comment "$OPEN" --body "$(date -u +%FT%TZ)  $RES"
+            fi
+          fi
+          [ "${{ steps.w.outcome }}" = "failure" ] && exit 1 || true
