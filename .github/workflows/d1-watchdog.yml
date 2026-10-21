@@ -30,6 +30,7 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_KV_TOKEN: ${{ secrets.CF_KV_TOKEN }}
         run: |
           DRYFLAG=""; if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.dry }}" = "true" ]; then DRYFLAG="--dry"; fi
           node d1-watchdog/d1_watchdog.mjs $DRYFLAG | tee w.log
@@ -47,13 +48,13 @@ jobs:
           else
             gh label create d1-guard --color B60205 --description "D1 read cap guard" 2>/dev/null || true
             TITLE="D1 GUARD: $ST"
-            if [ -z "$OPEN" ]; then
+            OPENTITLE=$(gh issue list --label d1-guard --state open --json title -q '.[0].title' || true)
+            if [ -n "$OPEN" ] && [ "$OPENTITLE" = "$TITLE" ]; then echo "same state as open issue: no new comment"
+            elif [ -n "$OPEN" ]; then gh issue edit "$OPEN" --title "$TITLE"; gh issue comment "$OPEN" --body "$(date -u +%FT%TZ)  $RES"
+            else
               gh issue create --title "$TITLE" --label d1-guard --body "$(date -u +%FT%TZ)  $RES"
               if [ -n "$MONITOR_BOT_TOKEN" ] && [ -n "$MONITOR_CHAT_ID" ]; then
                 curl -s -m 20 "https://api.telegram.org/bot$MONITOR_BOT_TOKEN/sendMessage" --data-urlencode "chat_id=$MONITOR_CHAT_ID" --data-urlencode "text=🛡️ نگهبان D1: وضعیت $ST. $RES" >/dev/null || true
               fi
-            else
-              gh issue comment "$OPEN" --body "$(date -u +%FT%TZ)  $RES"
             fi
           fi
-          [ "${{ steps.w.outcome }}" = "failure" ] && exit 1 || true

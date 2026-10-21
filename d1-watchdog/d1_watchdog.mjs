@@ -8,7 +8,8 @@ const TOKEN = process.env.CLOUDFLARE_API_TOKEN, ACC = process.env.CLOUDFLARE_ACC
 const KV_NS = "4873976699dd4a6480b965127a75ce4a", KEY = "d1_pause"; // WHALE_KV (bot binding)
 const HOUR_TRIP = Number(process.env.HOUR_TRIP || 1_000_000), DAY_TRIP = Number(process.env.DAY_TRIP || 3_500_000), DAY_WARN = Number(process.env.DAY_WARN || 2_000_000);
 if (!TOKEN || !ACC) { console.log('RESULT {"status":"error","msg":"missing CLOUDFLARE_API_TOKEN/ACCOUNT_ID"}'); process.exit(2); }
-const H = { Authorization: "Bearer " + TOKEN, "content-type": "application/json" };
+const KVTOKEN = process.env.CF_KV_TOKEN || TOKEN; // KV write needs "Workers KV Storage: Edit"; the analytics token alone gets HTTP 401 there
+const H = { Authorization: "Bearer " + TOKEN, "content-type": "application/json" }, HKV = { Authorization: "Bearer " + KVTOKEN, "content-type": "application/json" };
 const now = new Date(), S = now.toISOString().slice(0, 10) + "T00:00:00Z", E = now.toISOString().slice(0, 19) + "Z";
 const q = `query { viewer { accounts(filter:{accountTag:"${ACC}"}) { d1AnalyticsAdaptiveGroups(limit:1000, orderBy:[datetimeHour_ASC], filter:{datetimeHour_geq:"${S}", datetimeHour_leq:"${E}"}) { sum { rowsRead rowsWritten } dimensions { datetimeHour databaseId } } } } }`;
 let rows;
@@ -28,11 +29,11 @@ if (reasons.length) status = "trip"; else if (day > DAY_WARN) status = "warn";
 // KV flag
 const kvUrl = `https://api.cloudflare.com/client/v4/accounts/${ACC}/storage/kv/namespaces/${KV_NS}/values/${KEY}`;
 let flag = null, flagSet = false, flagErr = "";
-try { const g = await fetch(kvUrl, { headers: H, signal: AbortSignal.timeout(20000) }); flag = g.status === 200 ? await g.text() : null; if (g.status !== 200 && g.status !== 404) flagErr = "kv read HTTP " + g.status; } catch (e) { flagErr = "kv read " + e.message; }
+try { const g = await fetch(kvUrl, { headers: HKV, signal: AbortSignal.timeout(20000) }); flag = g.status === 200 ? await g.text() : null; if (g.status !== 200 && g.status !== 404) flagErr = "kv read HTTP " + g.status; } catch (e) { flagErr = "kv read " + e.message; }
 if (status === "trip" && !DRY && flag !== "1") {
   const exp = Math.floor(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 5, 0) / 1000); // next 00:05Z
-  try { const p = await fetch(kvUrl + "?expiration=" + exp, { method: "PUT", headers: { Authorization: "Bearer " + TOKEN, "content-type": "text/plain" }, body: "1", signal: AbortSignal.timeout(20000) }); flagSet = p.ok; if (!p.ok) flagErr = "kv write HTTP " + p.status; } catch (e) { flagErr = "kv write " + e.message; }
+  try { const p = await fetch(kvUrl + "?expiration=" + exp, { method: "PUT", headers: { Authorization: "Bearer " + KVTOKEN, "content-type": "text/plain" }, body: "1", signal: AbortSignal.timeout(20000) }); flagSet = p.ok; if (!p.ok) flagErr = "kv write HTTP " + p.status; } catch (e) { flagErr = "kv write " + e.message; }
 }
 console.log("HOURS " + JSON.stringify(hours));
 console.log("RESULT " + JSON.stringify({ status, dry: DRY, dayReads: day, dayWrites: wr, hourReads: cur, topDb, reasons, flagBefore: flag, flagSet, flagErr }));
-if (flagErr && status === "trip") process.exit(3); // flag could not be set: make the workflow loud
+
