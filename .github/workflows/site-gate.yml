@@ -21,7 +21,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: run gate (slow: concurrency 3, 429-safe)
+      - name: run gate (slow, concurrency 3, 429-safe)
         id: g
         continue-on-error: true
         run: node site-gate/site_consistency_audit.mjs --out=site-gate/rows.json --report=site-gate/report.md
