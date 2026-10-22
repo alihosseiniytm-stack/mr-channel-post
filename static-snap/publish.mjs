@@ -3,6 +3,7 @@
 // File naming MUST match snapName() in tradeApp.js: path without leading slash, then ~ before the query, & -> ~, = -> -
 import fs from "node:fs";
 import path from "node:path";
+import { buildBoards, buildStats } from "./hl_snap.mjs"; // 2026-10-22 CPU-limit fix: whale boards/stats/cards computed here, not per visitor in the bot
 // 2026-10-09: Cloudflare showed ~51k Worker requests/day with ZERO real users (cap 100k). This job runs every minute and used to (1) fetch the live endpoints through marketradarwhale.com (site Worker + bot Worker = 2 requests each) and (2) read the previous copy of every non-due file from the mr-static Worker (~30 requests/min). Now: live endpoints go straight to the bot Worker, previous copies come from GitHub Pages (not Cloudflare).
 const API = process.env.MR_API || "https://whale-alert-bot.alihosseini-ytm.workers.dev";
 const OUT = path.join(process.cwd(), "public", "snap");
@@ -39,7 +40,13 @@ function tierOf(p) {
 }
 const tierDue = {}; for (const t of Object.keys(TIER_MS)) tierDue[t] = !AUTO || !STATE[t] || NOW0 - STATE[t] >= TIER_MS[t] * 0.9;
 function dueNow(p) { if (!AUTO) return true; const t = tierOf(p); return t ? tierDue[t] : true; }
-await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
+// HL whale snapshot first: one 13 MB download here replaces the bot's per-request parse. On failure the old bot path runs for this run.
+let HLB = null;
+try { HLB = await buildBoards(OUT, snapName); for (const x of HLB.rows) ROWS.push(x); ok += HLB.rows.length; console.log("hl boards", JSON.stringify(HLB.meta.counts), HLB.meta.ms + " ms"); }
+catch (e) { bad.push("hl boards (" + e.message + ")"); }
+const FIXED_RUN = HLB ? FIXED.filter((p) => p !== "whale-cards") : FIXED;
+const VARIANTS_RUN = HLB ? VARIANTS.filter((p) => p.indexOf("whale-leaderboard") !== 0) : VARIANTS;
+await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
   try {
     let r;
     if (!dueNow(p)) { try { r = await fetch(READ_HOST + "/snap/" + snapName(p) + ".json"); if (!r.ok) r = null; } catch (e) { r = null; } }
@@ -88,6 +95,17 @@ await Promise.all(FIXED.concat(VARIANTS).map(async (p) => {
       fs.writeFileSync(path.join(OUT, name + ".json"), t); ROWS.push({ name, text: t }); ok++;
     }));
   } catch (e) { bad.push("whale-stats set (" + e.message + ")"); }
+}
+
+// per-wallet stats (snap/ws/<addr>.json) + whale cards from the same fill stats; on failure keep the previous cards file so it is never dropped
+if (HLB) {
+  let cardsOk = false;
+  try { const st = await buildStats(OUT, STATIC_HOST, HLB); for (const x of st.rows) ROWS.push(x); cardsOk = st.cards >= 4; console.log("hl stats", JSON.stringify({ files: st.files, refreshed: st.refreshed, failed: st.failed, cards: st.cards }), st.log.join("; ")); }
+  catch (e) { bad.push("hl stats (" + e.message + ")"); }
+  if (!cardsOk) {
+    try { const pr = await fetch(STATIC_HOST + "/snap/whale-cards.json"); const pt = pr.ok ? await pr.text() : ""; if (pt.length > 50) { JSON.parse(pt); fs.writeFileSync(path.join(OUT, "whale-cards.json"), pt); ROWS.push({ name: "whale-cards", text: pt }); kept.push("whale-cards"); } else bad.push("whale-cards (no stats, no previous copy)"); }
+    catch (e) { bad.push("whale-cards (" + e.message + ")"); }
+  }
 }
 
 {
