@@ -51,7 +51,11 @@ const VARIANTS_RUN = HLB ? VARIANTS.filter((p) => p.indexOf("whale-leaderboard")
 // SNAP BUNDLE (phase3 2026-10-27): ask the bot for several snapshots in ONE request (/snap-bundle runs them in-process), instead of ~20 single
 // requests per run (~32k of the bot's ~51k requests/day). Any item missing or not 200 falls back to the old single call below, so a broken bundle
 // costs requests, never data. Kill switch: env BUNDLE=0.
-const BUNDLE_ON = process.env.BUNDLE !== "0", BUNDLE_CHUNK = Number(process.env.BUNDLE_CHUNK || 6), BSTAT = { items: 0, ok: 0, reqs: 0, fail: 0 };
+// Only LIGHT paths go in a bundle (same list as SNAP_BUNDLE_PATHS in whale-alert-worker/src/floor3/snap_bundle.js; the bot refuses others), max 3 per request
+// (vizier 2026-10-27: grow only after CPU p99 < 7 ms for 1 h). Heavy ones (cg, app-i18n, consensus, sol clusters, leaderboard, whale-stats...) stay single calls.
+const BUNDLE_LIGHT = new Set(["whale-feed", "whale-live-positions", "whale-clusters", "pump-trending", "pump-graduating", "heat-coins", "aster-movers", "toman-rate", "snipe-signals",
+  "top-movers", "whale-sentiment", "whale-netflow", "signal-track-record", "sol-smart-agree", "big-transfers", "spot-whales"]);
+const BUNDLE_ON = process.env.BUNDLE !== "0", BUNDLE_CHUNK = Number(process.env.BUNDLE_CHUNK || 3), BSTAT = { items: 0, ok: 0, reqs: 0, fail: 0 };
 async function bundleFetch(list, chunk) {
   const out = {};
   if (!BUNDLE_ON || !list.length) return out;
@@ -67,7 +71,7 @@ async function bundleFetch(list, chunk) {
   }));
   return out;
 }
-const BUN = await bundleFetch(FIXED_RUN.concat(VARIANTS_RUN).filter((p) => dueNow(p)), BUNDLE_CHUNK);
+const BUN = await bundleFetch(FIXED_RUN.concat(VARIANTS_RUN).filter((p) => dueNow(p) && BUNDLE_LIGHT.has(p.split("?")[0])), BUNDLE_CHUNK);
 await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
   try {
     let r;
@@ -108,7 +112,7 @@ await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
       } catch (e) {}
       if (addrs.length >= 100) break;
     }
-    const SBUN = STATS_DUE ? await bundleFetch(addrs.map((a) => "whale-stats?addr=" + encodeURIComponent(a)), 10) : {};
+    const SBUN = STATS_DUE && process.env.BUNDLE_STATS === "1" ? await bundleFetch(addrs.map((a) => "whale-stats?addr=" + encodeURIComponent(a)), 10) : {};
     await Promise.all(addrs.map(async (a) => {
       const p = "whale-stats?addr=" + encodeURIComponent(a), name = snapName(p);
       const grab = async (url) => { const r = await fetch(url, { headers: { "user-agent": "mr-static-publisher" } }); const t = await r.text(); if (!r.ok) throw new Error("status " + r.status); JSON.parse(t); return t; };
