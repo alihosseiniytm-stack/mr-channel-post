@@ -1,0 +1,36 @@
+name: whales-daily
+# Daily whale-section gate (T30-01): snapshots fresh on mr-static, bot serves x-mrw-snap, 7 langs x 20 profiles = 140/140 200.
+# Script: tests/30_whales/whales_daily.mjs (byte-identical copy of whale-alert-worker/tests/30_whales/whales_daily.mjs).
+on:
+  schedule:
+    - cron: "23 5 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+  issues: write
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: run gate
+        id: g
+        continue-on-error: true
+        run: node tests/30_whales/whales_daily.mjs | tee gate.txt
+      - name: alert via GitHub Issue (GitHub e-mails the repo owner)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OPEN=$(gh issue list --label whales-gate --state open --json number -q '.[0].number' || true)
+          if [ "${{ steps.g.outcome }}" = "failure" ]; then
+            gh label create whales-gate --color B60205 --description "daily whale gate red" 2>/dev/null || true
+            BODY="$(head -25 gate.txt)"
+            if [ -z "$OPEN" ]; then gh issue create --title "WHALES GATE RED: daily check failed" --label whales-gate --body "$BODY"; else gh issue comment "$OPEN" --body "Still failing at $(date -u +%FT%TZ)"; fi
+            exit 1
+          else
+            if [ -n "$OPEN" ]; then gh issue comment "$OPEN" --body "Recovered at $(date -u +%FT%TZ): $(head -1 gate.txt)" && gh issue close "$OPEN"; fi
+          fi
