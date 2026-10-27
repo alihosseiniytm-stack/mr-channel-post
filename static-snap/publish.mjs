@@ -26,7 +26,9 @@ const EVN = process.env.GITHUB_EVENT_NAME, MIN = new Date().getUTCMinutes();
 const AUTO = (EVN === "schedule" || EVN === "workflow_dispatch") && !process.env.FORCE;
 // Tier timing comes from a small state file (last refresh per tier), NOT from the minute of the hour: a run takes ~70 s and overlaps the 1-minute trigger, so "minute < 2" fired once or twice per hour at random (it doubled the hourly D1 cost: 80k reads at :00 and 74k at :30).
 let STATE = {};
-try { const sr = await fetch(READ_HOST + "/snap/_state.json?t=" + Date.now()); if (sr.ok) STATE = await sr.json(); } catch (e) {}
+// 2026-10-27 phase3: read the state from mr-static too and keep the NEWEST stamp per tier. GitHub Pages (READ_HOST) lags ~10 min behind (build + CDN cache),
+// so with Pages alone the 5-min and hourly tiers looked "due" on almost every 1-min run: whale-stats was polled ~12k/day instead of ~2.4k, the 5-min set ~900/day each instead of 288.
+for (const h of [STATIC_HOST, READ_HOST]) { try { const sr = await fetch(h + "/snap/_state.json?t=" + Date.now(), { signal: AbortSignal.timeout(10000) }); if (sr.ok) { const j = await sr.json(); for (const k of Object.keys(j || {})) if (Number(j[k]) > (Number(STATE[k]) || 0)) STATE[k] = Number(j[k]); } } catch (e) {} }
 const NOW0 = Date.now();
 const TIER_MS = { hourly: 3600e3, spot: 1800e3, ten: 600e3, five: 300e3 };
 const LIVE = ["whale-feed", "whale-live-positions", "whale-clusters", "pump-trending", "pump-graduating", "heat-coins", "aster-movers", "toman-rate", "snipe-signals", "top-movers?window=1h"];
