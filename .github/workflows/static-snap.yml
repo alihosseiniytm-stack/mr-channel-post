@@ -34,7 +34,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - run: mkdir -p public/vendor public/icons public/status && cp ../vendor/*.js public/vendor/ && cp icons/*.png public/icons/ && cp status/index.html public/status/index.html
-      - run: npx --yes wrangler@4 deploy --config wrangler.jsonc
+      - name: upload to mr-static (1 retry after 20 s; ~7 of ~190 runs/day failed 'assets-upload-session', FOLLOWUPS 84)
+        run: |
+          npx --yes wrangler@4 deploy --config wrangler.jsonc && exit 0
+          echo "::warning::mr-static upload failed, retry in 20 s"
+          sleep 20
+          npx --yes wrangler@4 deploy --config wrangler.jsonc
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
