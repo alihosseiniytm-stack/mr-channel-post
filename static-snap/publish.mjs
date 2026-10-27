@@ -48,10 +48,31 @@ try { HLB = await buildBoards(OUT, snapName); for (const x of HLB.rows) ROWS.pus
 catch (e) { bad.push("hl boards (" + e.message + ")"); }
 const FIXED_RUN = HLB ? FIXED.filter((p) => p !== "whale-cards") : FIXED;
 const VARIANTS_RUN = HLB ? VARIANTS.filter((p) => p.indexOf("whale-leaderboard") !== 0) : VARIANTS;
+// SNAP BUNDLE (phase3 2026-10-27): ask the bot for several snapshots in ONE request (/snap-bundle runs them in-process), instead of ~20 single
+// requests per run (~32k of the bot's ~51k requests/day). Any item missing or not 200 falls back to the old single call below, so a broken bundle
+// costs requests, never data. Kill switch: env BUNDLE=0.
+const BUNDLE_ON = process.env.BUNDLE !== "0", BUNDLE_CHUNK = Number(process.env.BUNDLE_CHUNK || 6), BSTAT = { items: 0, ok: 0, reqs: 0, fail: 0 };
+async function bundleFetch(list, chunk) {
+  const out = {};
+  if (!BUNDLE_ON || !list.length) return out;
+  const parts = []; for (let i = 0; i < list.length; i += chunk) parts.push(list.slice(i, i + chunk));
+  await Promise.all(parts.map(async (part) => {
+    BSTAT.reqs++; BSTAT.items += part.length;
+    try {
+      const r = await fetch(API + "/snap-bundle?" + part.map((p) => "p=" + encodeURIComponent(p)).join("&"), { headers: { "user-agent": "mr-static-publisher" }, signal: AbortSignal.timeout(30000) });
+      if (!r.ok) throw new Error("status " + r.status);
+      const j = await r.json();
+      for (const p of part) { const it = j && j.items && j.items[p]; if (it && it.s === 200 && typeof it.b === "string" && it.b.length > 1) { out[p] = it.b; BSTAT.ok++; } }
+    } catch (e) { BSTAT.fail++; }
+  }));
+  return out;
+}
+const BUN = await bundleFetch(FIXED_RUN.concat(VARIANTS_RUN).filter((p) => dueNow(p)), BUNDLE_CHUNK);
 await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
   try {
     let r;
     if (!dueNow(p)) { try { r = await fetch(READ_HOST + "/snap/" + snapName(p) + ".json"); if (!r.ok) r = null; } catch (e) { r = null; } }
+    if (!r && BUN[p] !== undefined) { const bt = BUN[p]; r = { ok: true, status: 200, text: async () => bt }; }
     if (!r) r = await fetch(API + "/" + p, { headers: { "user-agent": "mr-static-publisher" } });
     const t = await r.text();
     if (!r.ok || t.length < 2) throw new Error("status " + r.status);
@@ -87,12 +108,16 @@ await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
       } catch (e) {}
       if (addrs.length >= 100) break;
     }
+    const SBUN = STATS_DUE ? await bundleFetch(addrs.map((a) => "whale-stats?addr=" + encodeURIComponent(a)), 10) : {};
     await Promise.all(addrs.map(async (a) => {
       const p = "whale-stats?addr=" + encodeURIComponent(a), name = snapName(p);
       const grab = async (url) => { const r = await fetch(url, { headers: { "user-agent": "mr-static-publisher" } }); const t = await r.text(); if (!r.ok) throw new Error("status " + r.status); JSON.parse(t); return t; };
       let t = null;
+      if (SBUN[p] !== undefined) { try { JSON.parse(SBUN[p]); t = SBUN[p]; } catch (e) {} }
+      if (!t) {
       try { t = await grab(STATS_DUE ? API + "/" + p : READ_HOST + "/snap/" + name + ".json"); } catch (e) {}
       if (!t) { try { t = await grab(STATS_DUE ? READ_HOST + "/snap/" + name + ".json" : API + "/" + p); } catch (e) {} }
+      }
       if (!t) return;
       fs.writeFileSync(path.join(OUT, name + ".json"), t); ROWS.push({ name, text: t }); ok++;
     }));
@@ -102,7 +127,7 @@ await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
 // per-wallet stats (snap/ws/<addr>.json) + whale cards from the same fill stats; on failure keep the previous cards file so it is never dropped
 if (HLB) {
   let cardsOk = false;
-  try { const st = await buildStats(OUT, STATIC_HOST, HLB); for (const x of st.rows) ROWS.push(x); cardsOk = st.cards >= 4; console.log("hl stats", JSON.stringify({ files: st.files, refreshed: st.refreshed, failed: st.failed, cards: st.cards }), st.log.join("; ")); }
+  try { const st = await buildStats(OUT, STATIC_HOST, HLB); for (const x of st.rows) ROWS.push(x); cardsOk = st.cards >= 4; console.log("snap bundle", JSON.stringify(BSTAT)); console.log("hl stats", JSON.stringify({ files: st.files, refreshed: st.refreshed, failed: st.failed, cards: st.cards }), st.log.join("; ")); }
   catch (e) { bad.push("hl stats (" + e.message + ")"); }
   if (!cardsOk) {
     try { const pr = await fetch(STATIC_HOST + "/snap/whale-cards.json"); const pt = pr.ok ? await pr.text() : ""; if (pt.length > 50) { JSON.parse(pt); fs.writeFileSync(path.join(OUT, "whale-cards.json"), pt); ROWS.push({ name: "whale-cards", text: pt }); kept.push("whale-cards"); } else bad.push("whale-cards (no stats, no previous copy)"); }
