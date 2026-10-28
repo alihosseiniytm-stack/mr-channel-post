@@ -18,7 +18,7 @@
    "knownDeviations": {}
   },
   "legacy-static": {
-   "pages": 53,
+   "pages": 65,
    "css": [
     "nav.*.css",
     "skin.*.css",
@@ -37,7 +37,9 @@
      "pages": 7,
      "example": "/ar/guides/"
     }
-   }
+   },
+   "pagesBefore": 53,
+   "pagesReason": "2026-10-28 re-baseline (T10-35): family grew (more pages in sitemap.xml since the 10-20 baseline); css/js expectations unchanged."
   },
   "home-lang": {
    "pages": 6,
@@ -154,7 +156,7 @@
    "knownDeviations": {}
   },
   "learn/blog": {
-   "pages": 51,
+   "pages": 7,
    "css": [
     "site.*.css",
     "skin.*.css"
@@ -166,10 +168,12 @@
    "header": true,
    "lang": true,
    "example": "/learn/ar/blog/",
-   "knownDeviations": {}
+   "knownDeviations": {},
+   "pagesBefore": 51,
+   "pagesReason": "2026-10-28 re-baseline (T10-09/T10-35): SEO phase-2 thin-page prune (10-23) took these pages out of sitemap.xml; they stay live (200) with x-robots-tag noindex,follow (checked live 10-28 13:35Z). css/js expectations unchanged."
   },
   "learn/brokers": {
-   "pages": 84,
+   "pages": 0,
    "css": [
     "site.*.css",
     "skin.*.css"
@@ -181,10 +185,12 @@
    "header": true,
    "lang": true,
    "example": "/learn/ar/brokers/alpari",
-   "knownDeviations": {}
+   "knownDeviations": {},
+   "pagesBefore": 84,
+   "pagesReason": "2026-10-28 re-baseline (T10-09/T10-35): SEO phase-2 thin-page prune (10-23) took these pages out of sitemap.xml; they stay live (200) with x-robots-tag noindex,follow (checked live 10-28 13:35Z). css/js expectations unchanged."
   },
   "learn/coins": {
-   "pages": 1408,
+   "pages": 7,
    "css": [
     "site.*.css",
     "skin.*.css"
@@ -196,10 +202,12 @@
    "header": true,
    "lang": true,
    "example": "/learn/ar/coins/",
-   "knownDeviations": {}
+   "knownDeviations": {},
+   "pagesBefore": 1408,
+   "pagesReason": "2026-10-28 re-baseline (T10-09/T10-35): SEO phase-2 thin-page prune (10-23) took these pages out of sitemap.xml; they stay live (200) with x-robots-tag noindex,follow (checked live 10-28 13:35Z). css/js expectations unchanged."
   },
   "learn/countries": {
-   "pages": 83,
+   "pages": 13,
    "css": [
     "site.*.css",
     "skin.*.css"
@@ -211,10 +219,12 @@
    "header": true,
    "lang": true,
    "example": "/learn/ar/countries/afghanistan",
-   "knownDeviations": {}
+   "knownDeviations": {},
+   "pagesBefore": 83,
+   "pagesReason": "2026-10-28 re-baseline (T10-09/T10-35): SEO phase-2 thin-page prune (10-23) took these pages out of sitemap.xml; they stay live (200) with x-robots-tag noindex,follow (checked live 10-28 13:35Z). css/js expectations unchanged."
   },
   "learn/exchanges": {
-   "pages": 105,
+   "pages": 4,
    "css": [
     "site.*.css",
     "skin.*.css"
@@ -226,7 +236,9 @@
    "header": true,
    "lang": true,
    "example": "/learn/ar/exchanges/binance",
-   "knownDeviations": {}
+   "knownDeviations": {},
+   "pagesBefore": 105,
+   "pagesReason": "2026-10-28 re-baseline (T10-09/T10-35): SEO phase-2 thin-page prune (10-23) took these pages out of sitemap.xml; they stay live (200) with x-robots-tag noindex,follow (checked live 10-28 13:35Z). css/js expectations unchanged."
   },
   "learn/faq": {
    "pages": 7,
@@ -289,7 +301,7 @@
    "knownDeviations": {}
   },
   "learn/stocks": {
-   "pages": 252,
+   "pages": 7,
    "css": [
     "site.*.css",
     "skin.*.css"
@@ -301,10 +313,12 @@
    "header": true,
    "lang": true,
    "example": "/learn/ar/stocks/",
-   "knownDeviations": {}
+   "knownDeviations": {},
+   "pagesBefore": 252,
+   "pagesReason": "2026-10-28 re-baseline (T10-09/T10-35): SEO phase-2 thin-page prune (10-23) took these pages out of sitemap.xml; they stay live (200) with x-robots-tag noindex,follow (checked live 10-28 13:35Z). css/js expectations unchanged."
   },
   "learn/terms": {
-   "pages": 140,
+   "pages": 0,
    "css": [
     "site.*.css",
     "skin.*.css"
@@ -322,7 +336,9 @@
      "pages": 42,
      "example": "/learn/ar/terms/ath"
     }
-   }
+   },
+   "pagesBefore": 140,
+   "pagesReason": "2026-10-28 re-baseline (T10-09/T10-35): SEO phase-2 thin-page prune (10-23) took these pages out of sitemap.xml; they stay live (200) with x-robots-tag noindex,follow (checked live 10-28 13:35Z). css/js expectations unchanged."
   },
   "learn/whale-bot": {
    "pages": 7,
@@ -340,7 +356,7 @@
    "knownDeviations": {}
   },
   "learn/today": {
-   "pages": 10,
+   "pages": 0,
    "css": [
     "nav.*.css",
     "tokens.*.css"
@@ -352,7 +368,9 @@
    "header": true,
    "lang": true,
    "example": "/learn/en/today/bitcoin",
-   "knownDeviations": {}
+   "knownDeviations": {},
+   "pagesBefore": 10,
+   "pagesReason": "2026-10-28 re-baseline (T10-09/T10-35): SEO phase-2 thin-page prune (10-23) took these pages out of sitemap.xml; they stay live (200) with x-robots-tag noindex,follow (checked live 10-28 13:35Z). css/js expectations unchanged."
   },
   "learn/domestic-exchanges": {
    "pages": 1,
@@ -400,5 +418,6 @@
    "example": "/trade/ar/aster/",
    "knownDeviations": {}
   }
- }
+ },
+ "pagesRebaselined": "2026-10-28"
 }
