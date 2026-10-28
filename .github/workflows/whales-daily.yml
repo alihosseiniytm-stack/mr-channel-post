@@ -1,5 +1,5 @@
 name: whales-daily
-# Daily whale-section gate (T30-01): snapshots fresh on mr-static, bot serves x-mrw-snap, 7 langs x 20 profiles = 140/140 200.
+# Daily whale-section gate (T30-01 + T30-20 copy-age test): snapshots fresh on mr-static, bot serves x-mrw-snap, 7 langs x 20 profiles = 140/140 200.
 # Script: tests/30_whales/whales_daily.mjs (byte-identical copy of whale-alert-worker/tests/30_whales/whales_daily.mjs).
 on:
   schedule:
@@ -20,7 +20,8 @@ jobs:
       - name: run gate
         id: g
         continue-on-error: true
-        run: node tests/30_whales/whales_daily.mjs | tee gate.txt
+        # T30-20: also the offline publisher-copy test (a 5-min snapshot must never be re-copied for hours from GitHub Pages)
+        run: node tests/30_whales/whales_daily.mjs | tee gate.txt && node tests/30_whales/test_copy_age.mjs | tee -a gate.txt
       - name: alert via GitHub Issue (GitHub e-mails the repo owner)
         env:
           GH_TOKEN: ${{ github.token }}
