@@ -20,7 +20,8 @@ checks.push(["LIMIT WARNING: Cloudflare free daily limits (D1 reads/writes, Work
   const j = await r.json(); const p = j && j.pace; if (!p || Date.now() - Number(p.at) > 1800000) return true; // unknown = not a limit problem
   const now = new Date(), h = now.getUTCHours() + now.getUTCMinutes() / 60; if (h < 3) return true;
   const left = 24 - h;
-  const readsEnd = p.d1_reads + (Number(p.d1_reads_last_hour) || 0) * left, writesEnd = p.d1_writes / h * 24;
+  const rate = p.d1_reads_last_3h != null && Number(p.d1_reads_last_3h) >= 0 ? Number(p.d1_reads_last_3h) / 3 : (Number(p.d1_reads_last_hour) || 0); /* T10-11: 3 h average */
+  const readsEnd = p.d1_reads + rate * left, writesEnd = p.d1_writes / h * 24;
   if (readsEnd > 4500000) throw new Error("D1 reads heading to " + Math.round(readsEnd / 1e5) / 10 + "M of 5M (used " + p.d1_reads + ", last hour " + p.d1_reads_last_hour + ")");
   if (writesEnd > 90000) throw new Error("D1 writes heading to " + Math.round(writesEnd) + " of 100k (used " + p.d1_writes + ")");
   if (p.cf_requests > 70000) throw new Error("Worker requests " + p.cf_requests + " of 100k");
