@@ -3,6 +3,7 @@
 // File naming MUST match snapName() in tradeApp.js: path without leading slash, then ~ before the query, & -> ~, = -> -
 import fs from "node:fs";
 import path from "node:path";
+import { needFresh, isPagesSlot } from "./copy_age.mjs"; // T30-20: never reuse a Pages copy older than its tier allows
 import { buildBoards, buildStats } from "./hl_snap.mjs"; // 2026-10-22 CPU-limit fix: whale boards/stats/cards computed here, not per visitor in the bot
 // 2026-10-09: Cloudflare showed ~51k Worker requests/day with ZERO real users (cap 100k). This job runs every minute and used to (1) fetch the live endpoints through marketradarwhale.com (site Worker + bot Worker = 2 requests each) and (2) read the previous copy of every non-due file from the mr-static Worker (~30 requests/min). Now: live endpoints go straight to the bot Worker, previous copies come from GitHub Pages (not Cloudflare).
 const API = process.env.MR_API || "https://whale-alert-bot.alihosseini-ytm.workers.dev";
@@ -26,9 +27,11 @@ const EVN = process.env.GITHUB_EVENT_NAME, MIN = new Date().getUTCMinutes();
 const AUTO = (EVN === "schedule" || EVN === "workflow_dispatch") && !process.env.FORCE;
 // Tier timing comes from a small state file (last refresh per tier), NOT from the minute of the hour: a run takes ~70 s and overlaps the 1-minute trigger, so "minute < 2" fired once or twice per hour at random (it doubled the hourly D1 cost: 80k reads at :00 and 74k at :30).
 let STATE = {};
+// T30-20 (2026-10-28): pf = per file, when its content was really fetched from the bot. Read from the Pages state only, because "not due" files are copied from Pages.
+let PAGES_PF = {}; const PF = {}; const staleCopy = [];
 // 2026-10-27 phase3: read the state from mr-static too and keep the NEWEST stamp per tier. GitHub Pages (READ_HOST) lags ~10 min behind (build + CDN cache),
 // so with Pages alone the 5-min and hourly tiers looked "due" on almost every 1-min run: whale-stats was polled ~12k/day instead of ~2.4k, the 5-min set ~900/day each instead of 288.
-for (const h of [STATIC_HOST, READ_HOST]) { try { const sr = await fetch(h + "/snap/_state.json?t=" + Date.now(), { signal: AbortSignal.timeout(10000) }); if (sr.ok) { const j = await sr.json(); for (const k of Object.keys(j || {})) if (Number(j[k]) > (Number(STATE[k]) || 0)) STATE[k] = Number(j[k]); } } catch (e) {} }
+for (const h of [STATIC_HOST, READ_HOST]) { try { const sr = await fetch(h + "/snap/_state.json?t=" + Date.now(), { signal: AbortSignal.timeout(10000) }); if (sr.ok) { const j = await sr.json(); if (h === READ_HOST && j && j.pf && typeof j.pf === "object") PAGES_PF = j.pf; for (const k of Object.keys(j || {})) if (Number(j[k]) > (Number(STATE[k]) || 0)) STATE[k] = Number(j[k]); } } catch (e) {} }
 const NOW0 = Date.now();
 const TIER_MS = { hourly: 3600e3, spot: 1800e3, ten: 600e3, five: 300e3 };
 const LIVE = ["whale-feed", "whale-live-positions", "whale-clusters", "pump-trending", "pump-graduating", "heat-coins", "aster-movers", "toman-rate", "snipe-signals", "top-movers?window=1h"];
@@ -41,7 +44,14 @@ function tierOf(p) {
   return "five"; // everything computed from big D1 tables
 }
 const tierDue = {}; for (const t of Object.keys(TIER_MS)) tierDue[t] = !AUTO || !STATE[t] || NOW0 - STATE[t] >= TIER_MS[t] * 0.9;
-function dueNow(p) { if (!AUTO) return true; const t = tierOf(p); return t ? tierDue[t] : true; }
+// T30-20: tier due OR the Pages copy is too old (its pf stamp) -> fetch fresh. Before this, the mr-static tier clock + Pages copies let a Pages copy be re-copied for hours.
+const DUE_MEMO = {};
+function dueNow(p) {
+  if (p in DUE_MEMO) return DUE_MEMO[p];
+  const t = tierOf(p), d = needFresh({ auto: AUTO, tier: t, tierDue: t ? tierDue[t] : true, copyFetchedAt: PAGES_PF[snapName(p)], now: NOW0, pagesSlot: isPagesSlot(MIN) });
+  if (AUTO && t && !tierDue[t] && d) staleCopy.push(p);
+  return (DUE_MEMO[p] = d);
+}
 // HL whale snapshot first: one 13 MB download here replaces the bot's per-request parse. On failure the old bot path runs for this run.
 let HLB = null;
 try { HLB = await buildBoards(OUT, snapName); for (const x of HLB.rows) ROWS.push(x); ok += HLB.rows.length; console.log("hl boards", JSON.stringify(HLB.meta.counts), HLB.meta.ms + " ms"); }
@@ -75,7 +85,8 @@ const BUN = await bundleFetch(FIXED_RUN.concat(VARIANTS_RUN).filter((p) => dueNo
 await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
   try {
     let r;
-    if (!dueNow(p)) { try { r = await fetch(READ_HOST + "/snap/" + snapName(p) + ".json"); if (!r.ok) r = null; } catch (e) { r = null; } }
+    let copied = false;
+    if (!dueNow(p)) { try { r = await fetch(READ_HOST + "/snap/" + snapName(p) + ".json"); if (!r.ok) r = null; else copied = true; } catch (e) { r = null; } }
     if (!r && BUN[p] !== undefined) { const bt = BUN[p]; r = { ok: true, status: 200, text: async () => bt }; }
     if (!r) r = await fetch(API + "/" + p, { headers: { "user-agent": "mr-static-publisher" } });
     const t = await r.text();
@@ -84,13 +95,14 @@ await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
     if (/"error"\s*:\s*"(unavailable|temporarily unavailable)"/.test(t.slice(0, 400))) throw new Error("unavailable");
     fs.writeFileSync(path.join(OUT, snapName(p) + ".json"), t);
     ROWS.push({ name: snapName(p), text: t });
+    if (tierOf(p)) { const c = copied ? PAGES_PF[snapName(p)] : NOW0; if (c) PF[snapName(p)] = c; }
     ok++;
   } catch (e) {
     // KEEP_PREVIOUS: a failed refresh must not delete the last good copy
     try {
       const pr = await fetch(READ_HOST + "/snap/" + snapName(p) + ".json");
       const pt = pr.ok ? await pr.text() : "";
-      if (pt.length > 1) { JSON.parse(pt); if (!/"error"\s*:\s*"(unavailable|temporarily unavailable)"/.test(pt.slice(0, 400))) { fs.writeFileSync(path.join(OUT, snapName(p) + ".json"), pt); ROWS.push({ name: snapName(p), text: pt }); ok++; kept.push(p); return; } }
+      if (pt.length > 1) { JSON.parse(pt); if (!/"error"\s*:\s*"(unavailable|temporarily unavailable)"/.test(pt.slice(0, 400))) { fs.writeFileSync(path.join(OUT, snapName(p) + ".json"), pt); ROWS.push({ name: snapName(p), text: pt }); if (PAGES_PF[snapName(p)]) PF[snapName(p)] = PAGES_PF[snapName(p)]; ok++; kept.push(p); return; } }
     } catch (e2) {}
     bad.push(p + " (" + e.message + ", no previous copy)");
   }
@@ -141,6 +153,8 @@ if (HLB) {
 
 {
   const ns = Object.assign({}, STATE); for (const t of Object.keys(TIER_MS)) if (tierDue[t]) ns[t] = NOW0;
+  ns.pf = PF; // T30-20: fetch time of each tiered file in THIS run's output (Pages serves it after the next 15-min slot)
+  console.log("copy guard: refetched " + staleCopy.length + " stale Pages copies" + (staleCopy.length ? ": " + staleCopy.join(", ") : ""));
   fs.writeFileSync(path.join(OUT, "_state.json"), JSON.stringify(ns));
 }
 // ROUTING (owner 2026-10-02: use the reserve hosts live, not only after a failure): routing.json tells browsers which reserve hosts may take a SMALL share of SLOW-data reads (tradeApp mrCanaryPick). A host is listed only when it answers and its copy is < 40 min old, so a dead or stale host gets 0. Shares are small on purpose: Firebase caps at 10 GB/month per project and a disabled Hosting site would cost us the reserve. CANARY_SCALE env scales all shares (0 = off).
