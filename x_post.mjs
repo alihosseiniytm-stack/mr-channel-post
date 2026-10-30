@@ -51,7 +51,7 @@ async function pick() {
 
 function render(p, file) {
   const d = { title: "Whale long · " + p.coin, date: new Date(p.time).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }), dir: "ltr", footer: "Wallet " + short(p.address),
-    cards: [{ title: "Whale position (Hyperliquid)", rows: [
+    cards: [{ title: "Whale position", rows: [
       { name: "LONG " + p.coin, value: usd(p.value), change: p.leverage + "x", side: "up" },
       { name: "Entry price", value: "$" + px(Number(p.entryPx)), change: "", side: "up" },
       { name: "Liquidation", value: "$" + px(Number(p.liqPx)), change: "", side: "dn" },
