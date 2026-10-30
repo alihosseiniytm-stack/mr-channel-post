@@ -25,3 +25,13 @@ export function needFresh({ auto, tier, tierDue, copyFetchedAt, now, pagesSlot }
   if (tierDue || (pagesSlot && tier !== "hourly")) return true;
   return copyTooOld(copyFetchedAt, tier, now);
 }
+
+// fix-deploy-2 (T60-08, 2026-10-30): an hourly file fetched fresh on a run that is NOT a Pages slot lands on mr-static only; Pages keeps
+// the older copy. Copying from Pages on the next not-due runs then put that OLD file back on mr-static (new i18n keys lagged ~2 h).
+// So for the hourly tier a not-due copy comes from whichever host holds the NEWER pf stamp. Ties / unknown -> Pages (old behaviour).
+// Returns { src: "static" | "pages", pf } where pf = the fetch time of the copy we take (undefined = unknown).
+export function pickCopySource({ tier, pagesPf, staticPf }) {
+  const p = Number(pagesPf) > 0 ? Number(pagesPf) : undefined, s = Number(staticPf) > 0 ? Number(staticPf) : undefined;
+  if (tier === "hourly" && s !== undefined && (p === undefined || s > p)) return { src: "static", pf: s };
+  return { src: "pages", pf: p };
+}

@@ -3,7 +3,7 @@
 // GitHub Pages, Pages updated only by 15-min slot runs and visible ~10 min later, some slot runs cancelled.
 // It proves (a) the OLD rule lets a 5-min-tier file go > 90 min stale (the 2026-10-28 whale-consensus / big-transfers incident) and
 // (b) the NEW rule (needFresh) keeps it under the copy limit + one tier, without polling the bot every minute.
-import { copyTooOld, needFresh, COPY_MAX_MS, isPagesSlot } from "../../static-snap/copy_age.mjs";
+import { copyTooOld, needFresh, COPY_MAX_MS, isPagesSlot, pickCopySource } from "../../static-snap/copy_age.mjs";
 let fail = 0; const ok = (c, m) => { console.log((c ? "PASS " : "FAIL ") + m); if (!c) fail++; };
 const MIN = 60e3, TIER = 5 * MIN;
 
@@ -15,6 +15,18 @@ ok(isPagesSlot(0) && isPagesSlot(14) && isPagesSlot(46) && !isPagesSlot(5), "Pag
 ok(needFresh({ auto: false, tier: "five", tierDue: false, copyFetchedAt: 1e12, now: 1e12 }) === true, "manual run = always fresh");
 ok(COPY_MAX_MS.five + TIER < 90 * MIN, "5-min tier limit + tier < 90 min (tools/freshness_config.json whale-consensus / big-transfers)");
 
+// fix-deploy-2 (2026-10-30): hourly not-due copies come from the host with the NEWER pf (stale i18n pack incident)
+{ const P = pickCopySource;
+ok(P({ tier: "hourly", pagesPf: 1000, staticPf: 2000 }).src === "static" && P({ tier: "hourly", pagesPf: 1000, staticPf: 2000 }).pf === 2000, "hourly: mr-static newer -> copy from mr-static, pf = its stamp");
+ok(P({ tier: "hourly", pagesPf: 3000, staticPf: 2000 }).src === "pages" && P({ tier: "hourly", pagesPf: 3000, staticPf: 2000 }).pf === 3000, "hourly: Pages newer -> copy from Pages");
+ok(P({ tier: "hourly", pagesPf: 2000, staticPf: 2000 }).src === "pages", "hourly: tie -> Pages (old behaviour)");
+ok(P({ tier: "hourly", pagesPf: undefined, staticPf: 2000 }).src === "static", "hourly: Pages stamp unknown, mr-static known -> mr-static");
+ok(P({ tier: "hourly", pagesPf: undefined, staticPf: undefined }).src === "pages" && P({ tier: "hourly" }).pf === undefined, "hourly: both unknown -> Pages, pf unknown (needFresh then fetches fresh)");
+ok(P({ tier: "five", pagesPf: 1000, staticPf: 9000 }).src === "pages", "other tiers keep copying from Pages (no extra mr-static requests)");
+ok(P({ tier: "hourly", pagesPf: "x", staticPf: "1500" }).src === "static" && P({ tier: "hourly", pagesPf: "x", staticPf: "1500" }).pf === 1500, "bad / string stamps are parsed or ignored");
+// the incident: fresh at 10:12 (not a Pages slot) -> mr-static pf 10:12, Pages pf 09:15; the 10:20 not-due run must keep the 10:12 copy and not refetch
+{ const t0 = Date.UTC(2026, 9, 30, 9, 15), t1 = Date.UTC(2026, 9, 30, 10, 12), now = Date.UTC(2026, 9, 30, 10, 20); const c = P({ tier: "hourly", pagesPf: t0, staticPf: t1 });
+  ok(c.src === "static" && c.pf === t1 && needFresh({ auto: true, tier: "hourly", tierDue: false, copyFetchedAt: c.pf, now, pagesSlot: false }) === false, "incident replay: 10:20 run copies the 10:12 mr-static file, no extra bot fetch"); } }
 function simulate(useNew, phase, lagMin, cancelEvery) {
   let staticState = phase ? 0 : 0, lastDue = -phase * MIN; // phase shifts when the tier falls due relative to the 15-min slots
   let staticContent = 0, pagesQueue = [], pagesView = { contentAt: 0, pf: undefined, state: 0 };

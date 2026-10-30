@@ -3,7 +3,7 @@
 // File naming MUST match snapName() in tradeApp.js: path without leading slash, then ~ before the query, & -> ~, = -> -
 import fs from "node:fs";
 import path from "node:path";
-import { needFresh, isPagesSlot } from "./copy_age.mjs"; // T30-20: never reuse a Pages copy older than its tier allows
+import { needFresh, isPagesSlot, pickCopySource } from "./copy_age.mjs"; // T30-20: never reuse a Pages copy older than its tier allows
 import { buildBoards, buildStats } from "./hl_snap.mjs"; // 2026-10-22 CPU-limit fix: whale boards/stats/cards computed here, not per visitor in the bot
 // 2026-10-09: Cloudflare showed ~51k Worker requests/day with ZERO real users (cap 100k). This job runs every minute and used to (1) fetch the live endpoints through marketradarwhale.com (site Worker + bot Worker = 2 requests each) and (2) read the previous copy of every non-due file from the mr-static Worker (~30 requests/min). Now: live endpoints go straight to the bot Worker, previous copies come from GitHub Pages (not Cloudflare).
 const API = process.env.MR_API || "https://whale-alert-bot.alihosseini-ytm.workers.dev";
@@ -28,10 +28,10 @@ const AUTO = (EVN === "schedule" || EVN === "workflow_dispatch") && !process.env
 // Tier timing comes from a small state file (last refresh per tier), NOT from the minute of the hour: a run takes ~70 s and overlaps the 1-minute trigger, so "minute < 2" fired once or twice per hour at random (it doubled the hourly D1 cost: 80k reads at :00 and 74k at :30).
 let STATE = {};
 // T30-20 (2026-10-28): pf = per file, when its content was really fetched from the bot. Read from the Pages state only, because "not due" files are copied from Pages.
-let PAGES_PF = {}; const PF = {}; const staleCopy = [];
+let PAGES_PF = {}, STATIC_PF = {}; const PF = {}; const staleCopy = [];
 // 2026-10-27 phase3: read the state from mr-static too and keep the NEWEST stamp per tier. GitHub Pages (READ_HOST) lags ~10 min behind (build + CDN cache),
 // so with Pages alone the 5-min and hourly tiers looked "due" on almost every 1-min run: whale-stats was polled ~12k/day instead of ~2.4k, the 5-min set ~900/day each instead of 288.
-for (const h of [STATIC_HOST, READ_HOST]) { try { const sr = await fetch(h + "/snap/_state.json?t=" + Date.now(), { signal: AbortSignal.timeout(10000) }); if (sr.ok) { const j = await sr.json(); if (h === READ_HOST && j && j.pf && typeof j.pf === "object") PAGES_PF = j.pf; for (const k of Object.keys(j || {})) if (Number(j[k]) > (Number(STATE[k]) || 0)) STATE[k] = Number(j[k]); } } catch (e) {} }
+for (const h of [STATIC_HOST, READ_HOST]) { try { const sr = await fetch(h + "/snap/_state.json?t=" + Date.now(), { signal: AbortSignal.timeout(10000) }); if (sr.ok) { const j = await sr.json(); if (j && j.pf && typeof j.pf === "object") { if (h === READ_HOST) PAGES_PF = j.pf; else STATIC_PF = j.pf; } for (const k of Object.keys(j || {})) if (Number(j[k]) > (Number(STATE[k]) || 0)) STATE[k] = Number(j[k]); } } catch (e) {} }
 const NOW0 = Date.now();
 const TIER_MS = { hourly: 3600e3, spot: 1800e3, ten: 600e3, five: 300e3 };
 const LIVE = ["whale-feed", "whale-live-positions", "whale-clusters", "pump-trending", "pump-graduating", "heat-coins", "aster-movers", "toman-rate", "snipe-signals", "top-movers?window=1h"];
@@ -46,9 +46,11 @@ function tierOf(p) {
 const tierDue = {}; for (const t of Object.keys(TIER_MS)) tierDue[t] = !AUTO || !STATE[t] || NOW0 - STATE[t] >= TIER_MS[t] * 0.9;
 // T30-20: tier due OR the Pages copy is too old (its pf stamp) -> fetch fresh. Before this, the mr-static tier clock + Pages copies let a Pages copy be re-copied for hours.
 const DUE_MEMO = {};
+// fix-deploy-2: where a not-due copy comes from (hourly tier: the host with the newer pf, see copy_age.pickCopySource)
+const copySrc = (p) => pickCopySource({ tier: tierOf(p), pagesPf: PAGES_PF[snapName(p)], staticPf: STATIC_PF[snapName(p)] });
 function dueNow(p) {
   if (p in DUE_MEMO) return DUE_MEMO[p];
-  const t = tierOf(p), d = needFresh({ auto: AUTO, tier: t, tierDue: t ? tierDue[t] : true, copyFetchedAt: PAGES_PF[snapName(p)], now: NOW0, pagesSlot: isPagesSlot(MIN) });
+  const t = tierOf(p), d = needFresh({ auto: AUTO, tier: t, tierDue: t ? tierDue[t] : true, copyFetchedAt: copySrc(p).pf, now: NOW0, pagesSlot: isPagesSlot(MIN) });
   if (AUTO && t && !tierDue[t] && d) staleCopy.push(p);
   return (DUE_MEMO[p] = d);
 }
@@ -86,7 +88,8 @@ await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
   try {
     let r;
     let copied = false;
-    if (!dueNow(p)) { try { r = await fetch(READ_HOST + "/snap/" + snapName(p) + ".json"); if (!r.ok) r = null; else copied = true; } catch (e) { r = null; } }
+    let csrc = null;
+    if (!dueNow(p)) { csrc = copySrc(p); try { r = await fetch((csrc.src === "static" ? STATIC_HOST : READ_HOST) + "/snap/" + snapName(p) + ".json" + (csrc.src === "static" ? "?t=" + NOW0 : "")); if (!r.ok) r = null; else copied = true; } catch (e) { r = null; } }
     if (!r && BUN[p] !== undefined) { const bt = BUN[p]; r = { ok: true, status: 200, text: async () => bt }; }
     if (!r) r = await fetch(API + "/" + p, { headers: { "user-agent": "mr-static-publisher" } });
     const t = await r.text();
@@ -95,7 +98,7 @@ await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
     if (/"error"\s*:\s*"(unavailable|temporarily unavailable)"/.test(t.slice(0, 400))) throw new Error("unavailable");
     fs.writeFileSync(path.join(OUT, snapName(p) + ".json"), t);
     ROWS.push({ name: snapName(p), text: t });
-    if (tierOf(p)) { const c = copied ? PAGES_PF[snapName(p)] : NOW0; if (c) PF[snapName(p)] = c; }
+    if (tierOf(p)) { const c = copied ? csrc.pf : NOW0; if (c) PF[snapName(p)] = c; }
     ok++;
   } catch (e) {
     // KEEP_PREVIOUS: a failed refresh must not delete the last good copy
