@@ -2,7 +2,7 @@
 //   P1 shorts open before T0 | P2 biggest realized winners since T0 | P3 dip buyers after T0 | P4 self-custody angle.
 // usage: node news_event.mjs --event "Binance hack" --t0 2026-10-29T20:24:00Z --coins BTC,ETH,BNB,SOL --out x-img/news_binance [--fills cache.json] [--mode analyze|publish] [--live]
 //   analyze (default) = fetch/analyze, render 4 cards, write <out>/posts.json + telegram.txt, NOTHING sent.
-//   publish = send posts.json to Buffer (P1 shareNow, P2-P4 customScheduled +2/+4/+6 h; draft unless --live). env BUFFER_API_KEY, BUFFER_CHANNEL_ID.
+//   publish = send posts.json to Buffer (always shareNow (fresh data); publish ONE post per run with ONLY=<n> right after rebuilding; draft unless --live). env BUFFER_API_KEY, BUFFER_CHANNEL_ID.
 // TRUST GATE: facts only (times + sizes); assertClean() throws on accusation words; every text is checked before it is written.
 import fs from "node:fs";
 import { usd, px, qty, sg, sizeEmoji } from "./x_lib.mjs";
@@ -145,7 +145,7 @@ async function publish(out, live) {
   for (const p of j.posts) { if (only.length && !only.includes(p.n)) continue; assertClean(p.text);
     for (let k = 0; k < 12; k++) { if ((await fetch(RAW + p.file, { method: "HEAD" })).ok) break; await sleep(5000); }
     const input = { text: p.text, channelId: cid, schedulingType: "automatic", assets: [{ image: { url: RAW + p.file } }] };
-    if (!live) { input.mode = "addToQueue"; input.saveToDraft = true; } else if (p.n === 1) input.mode = "shareNow"; else { input.mode = "customScheduled"; input.dueAt = new Date(Date.now() + (p.n - 1) * 2 * 3600e3).toISOString(); }
+    if (!live) { input.mode = "addToQueue"; input.saveToDraft = true; } else input.mode = "shareNow"; // owner rule: live data is posted the moment it is built, never queued (queued numbers go stale). One post per run: ONLY=<n>, rebuild just before.
     const r = await fetch("https://api.buffer.com", { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + key }, body: JSON.stringify({ query: q, variables: { i: input } }) }).then((x) => x.json());
     const o = r.data?.createPost; console.log("P" + p.n, p.type, JSON.stringify(o || r.errors).slice(0, 300)); res.push({ n: p.n, mode: input.mode, dueAt: input.dueAt, result: o || r.errors }); }
   fs.writeFileSync(out + "/publish_log.json", JSON.stringify({ at: new Date().toISOString(), live, res }, null, 1));
