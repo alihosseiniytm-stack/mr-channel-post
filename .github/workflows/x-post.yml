@@ -33,7 +33,7 @@ jobs:
           if [ -z "$MODE" ]; then
             if [ "${{ vars.X_POST_LIVE }}" = "true" ]; then MODE=queue; else echo "X_POST_LIVE not true: dry run only"; MODE=dry; fi
           fi
-          node x_post.mjs --n 1 --mode "$MODE" $([ "$MODE" = dry ] || echo --save)
+          node x_post.mjs --n "${{ github.event.inputs.n || 1 }}" --mode "$MODE" $([ "$MODE" = dry ] || echo --save)
       - name: save history
         run: |
           git add x_history.json x-img || true
