@@ -1,0 +1,24 @@
+name: news-event-post
+# T50-11: publish the prepared news-event posts (x-img/<dir>/posts.json) to Buffer: P1 shareNow, P2-P4 scheduled +2/+4/+6 h. Manual only.
+on:
+  workflow_dispatch:
+    inputs:
+      dir: { description: "posts dir", default: "x-img/news_binance" }
+      live: { description: "true = live, else Buffer drafts", default: "false" }
+      only: { description: "comma list of post numbers (empty = all)", default: "" }
+permissions: { contents: read }
+concurrency: news-event-post
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: node news_event.mjs --mode publish --out "${{ inputs.dir }}" ${{ inputs.live == 'true' && '--live' || '' }}
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
+          ONLY: ${{ inputs.only }}
+      - run: cat "${{ inputs.dir }}/publish_log.json"
