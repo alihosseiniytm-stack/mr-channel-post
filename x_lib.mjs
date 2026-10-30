@@ -26,7 +26,7 @@ export function makeText(m, base = "https://marketradarwhale.com", thread = fals
   const url = `${base}/en/whale/${m.address}/`;
   const act = `${m.side} opened${m.lev ? ` at ${m.lev}x` : ""}`;
   const wr = m.win != null ? ` · ${Math.round(m.win * 100)}% win rate (${m.trades} trades)` : "";
-  const rec = m.rank ? `📊 Track record: No. ${m.rank} of Hyperliquid whales this month, ${sg(m.pnl30)} profit${wr}`
+  const rec = m.rank ? `📊 Track record: No. ${m.rank} whale this month, ${sg(m.pnl30)} profit${wr}`
                      : m.pnlMonth != null ? `📊 Track record: ${sg(m.pnlMonth)} this month${wr}` : `📊 Track record: full trade history on its page`;
   const text = `${sizeEmoji(m.notional)} ${qty(m.sizeCoin)} ${m.coin} (${usd(m.notional)}) ${act}
 Entry $${px(m.entry)} · ${m.label}

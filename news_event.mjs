@@ -8,7 +8,7 @@ import fs from "node:fs";
 import { usd, px, qty, sg, sizeEmoji } from "./x_lib.mjs";
 
 const BASE = "https://marketradarwhale.com", RAW = "https://raw.githubusercontent.com/alihosseiniytm-stack/mr-channel-post/main/";
-export const FORBIDDEN = /insider|\bknew\b|\bknow(s|ing)?\b|suspicio|manipulat|front-?run|leak|tipped|accus|fraud|rigged|cheat|scam|predict|foresaw|foresee|illegal|criminal/i;
+export const FORBIDDEN = /insider|\bknew\b|\bknow(s|ing)?\b|suspicio|manipulat|front-?run|leak|tipped|accus|fraud|rigged|cheat|scam|predict|foresaw|foresee|illegal|criminal|hyperliquid|bybit|okx|coinbase|kucoin|whale.?alert/i;
 export function assertClean(t) { const m = String(t).match(FORBIDDEN); if (m) throw new Error("TRUST GATE: forbidden word '" + m[0] + "' in: " + String(t).slice(0, 80)); return t; }
 export const hoursBefore = (t, t0) => { const m = Math.round((t0 - t) / 60000); return m < 90 ? m + " min" : m < 2880 ? Math.round(m / 60) + " h" : Math.round(m / 1440) + " d"; };
 export const utc = (t) => new Date(t).toISOString().slice(11, 16) + " UTC";
@@ -62,7 +62,7 @@ async function profile(addr) { // track record: leaderboard rank/30d profit + wi
   const i = lb.sort((a, b) => b.pnl - a.pnl).findIndex((w) => w.address.toLowerCase() === addr);
   return { win: st?.winRate, trades: st?.trades, rank: i >= 0 ? i + 1 : null, pnl30: i >= 0 ? lb[i].pnl : null };
 }
-const rec = (p) => (p.rank ? `No. ${p.rank} of Hyperliquid whales this month (${sg(p.pnl30)})` : "") + (p.win != null && p.trades >= 5 ? `${p.rank ? " · " : ""}${Math.round(p.win * 100)}% win rate over ${p.trades} trades` : "");
+const rec = (p) => (p.rank ? `No. ${p.rank} whale this month (${sg(p.pnl30)})` : "") + (p.win != null && p.trades >= 5 ? `${p.rank ? " · " : ""}${Math.round(p.win * 100)}% win rate over ${p.trades} trades` : "");
 const wurl = (a) => `${BASE}/en/whale/${a}/`;
 const fit = (variants, max = 280) => { for (const v of variants) { const n = v.replace(/https?:\/\/\S+/g, "x".repeat(23)).length; if (n <= max) return v; } return variants.at(-1); };
 
@@ -103,12 +103,12 @@ export async function buildPosts({ event, t0, coins, out, fillsCache, min = 250e
   let p1;
   if (top.length >= 2) {
     const L = top.map((s) => `${sizeEmoji(s.notional)} ${usd(s.notional)} ${s.coin} short · added ${hoursBefore(s.lastOpenT, t0)} before`);
-    const text = fit([`${sizeEmoji(top[0].notional)} Whales held big shorts before the ${event} sell-off (from ${utc(t0)}, Oct 29)\n${L.join("\n")}\nPublic Hyperliquid data 👇\n${wurl(top[0].addr)}\n#${top[0].coin} #crypto`,
+    const text = fit([`${sizeEmoji(top[0].notional)} Whales held big shorts before the ${event} sell-off (from ${utc(t0)}, Oct 29)\n${L.join("\n")}\nPublic on-chain whale data 👇\n${wurl(top[0].addr)}\n#${top[0].coin} #crypto`,
       `${sizeEmoji(top[0].notional)} Whale shorts open before the ${event} sell-off\n${L.slice(0, 2).join("\n")}\n${wurl(top[0].addr)}\n#${top[0].coin} #crypto`]);
     p1 = { type: "P1-shorts", text, card: top[0], tele: top.map((s) => `${sizeEmoji(s.notional)} ${qty(s.size)} ${s.coin} SHORT (${usd(s.notional)}) · last added ${hoursBefore(s.lastOpenT, t0)} before ${utc(t0)} · ${stateLine(s)} · est. P/L since then ${sg(s.pnl)}\n📊 ${rec(s.profile) || "full history on its page"}\n${wurl(s.addr)}`).join("\n\n") };
   }
-  const w3 = []; for (const w of wins) { if (w3.find((x) => x.addr === w.addr)) continue; w3.push(w); if (w3.length === 3) break; }
-  for (const w of w3) w.profile = await profile(w.addr);
+  // owner rule (T50-09): only whales with a good record: win >= 55% over >= 10 trades and 30d profit > 0
+  const w3 = []; for (const w of wins) { if (w3.find((x) => x.addr === w.addr)) continue; w.profile = await profile(w.addr); const p = w.profile || {}; if (!(p.win >= 0.55 && p.trades >= 10 && p.pnl30 > 0)) continue; w3.push(w); if (w3.length === 3) break; }
   if (!p1 && w3.length) p1 = { type: "P1-winners-fallback" };
   const defs = [];
   if (p1?.type === "P1-shorts") defs.push(p1);
@@ -118,14 +118,14 @@ export async function buildPosts({ event, t0, coins, out, fillsCache, min = 250e
   const d3 = []; for (const d of dips) { if (d3.find((x) => x.addr === d.addr)) continue; d3.push(d); if (d3.length === 3) break; }
   for (const d of d3) { d.chg = ((+mids[d.coin] - d.avg) / d.avg) * 100; d.profile = await profile(d.addr); }
   if (d3.length) { const L = d3.map((d) => `${sizeEmoji(d.notional)} ${usd(d.notional)} ${d.coin} bought · avg $${px(d.avg)} (${d.chg >= 0 ? "+" : ""}${d.chg.toFixed(1)}% at ${utc(Date.now())})`);
-    defs.push({ type: "P3-dip", text: fit([`🛒 Whales buying the ${event} dip\n${L.join("\n")}\nPublic Hyperliquid data 👇\n${wurl(d3[0].addr)}\n#${d3[0].coin} #crypto`]), card: { ...d3[0], dip: true },
+    defs.push({ type: "P3-dip", text: fit([`🛒 Whales buying the ${event} dip\n${L.join("\n")}\nPublic on-chain whale data 👇\n${wurl(d3[0].addr)}\n#${d3[0].coin} #crypto`]), card: { ...d3[0], dip: true },
       tele: d3.map((d) => `${usd(d.notional)} ${d.coin} LONG opened after ${utc(t0)} · avg $${px(d.avg)} · now ${d.chg >= 0 ? "+" : ""}${d.chg.toFixed(1)}%\n📊 ${rec(d.profile) || "full history on its page"}\n${wurl(d.addr)}`).join("\n\n") }); }
-  defs.push({ type: "P4-selfcustody", text: `🔐 After the ${event}: keep your funds in your own wallet.\nOn MarketRadar Whale you trade straight from your own wallet and follow the biggest Hyperliquid whales live.\n${BASE}/en/\n#crypto #selfcustody`,
-    tele: `🔐 After the ${event}: keep your funds in your own wallet.\nOn MarketRadar Whale you trade straight from your own wallet and follow the biggest Hyperliquid whales live.\n${BASE}/en/`, card: { selfcustody: true } });
+  defs.push({ type: "P4-selfcustody", text: `🔐 After the ${event}: keep your funds in your own wallet.\nOn MarketRadar Whale you trade straight from your own wallet and follow the biggest whales live.\n${BASE}/en/\n#crypto #selfcustody`,
+    tele: `🔐 After the ${event}: keep your funds in your own wallet.\nOn MarketRadar Whale you trade straight from your own wallet and follow the biggest whales live.\n${BASE}/en/`, card: { selfcustody: true } });
   // render
   const from = t0 - 3 * 3600e3;
   for (const [i, d] of defs.entries()) { assertClean(d.text); assertClean(d.tele || ""); const file = `${out}/P${i + 1}_${d.type}.png`; d.file = file; const c = d.card; let html;
-    if (c.selfcustody) html = cardPage("Your keys, <b>your funds</b>", `${event}: exchange funds are not in your hands`, [["Trade from", "Your own wallet"], ["Custody", "Non-custodial"], ["Data", "Public, live"]], "<div style='height:300px'></div>", [evT(Date.now()), "Hyperliquid whale data"], "#35e6b8");
+    if (c.selfcustody) html = cardPage("Your keys, <b>your funds</b>", `${event}: exchange funds are not in your hands`, [["Trade from", "Your own wallet"], ["Custody", "Non-custodial"], ["Data", "Public, live"]], "<div style='height:300px'></div>", [evT(Date.now()), "Public whale data"], "#35e6b8");
     else { const cs = await candlesFor(c.coin, Math.min(from, (c.lastOpenT || c.firstT || t0) - 3600e3)), now = +mids[c.coin];
       if (c.lastOpenT) html = cardPage(`<b>SHORT</b> ${c.coin} · ${usd(c.notional)}`, `⚡ ${event}: short last added ${hoursBefore(c.lastOpenT, t0)} before ${utc(t0)} · est. P/L since then: ${sg(c.pnl)}`, [["Position at T0", usd(c.notional)], ["Last added", utc(c.lastOpenT)], ["Entry", "$" + px(c.now?.entry ?? c.lastOpenPx)], ["Whale 30d profit", c.profile.pnl30 != null ? sg(c.profile.pnl30) : "—"]], chart(cs, c.now?.entry ?? c.lastOpenPx, c.lastOpenT, "SHORT", now, c.now?.lev), [evT(t0), `${c.coin} 1h candles`], "#ff5470");
       else if (c.winner) html = cardPage(`<b>${sg(c.pnl)}</b> ${c.coin} realized`, `${event}: realized profit since ${utc(t0)}`, [["Realized", sg(c.pnl)], ["Fills", String(c.trades)], ["Whale 30d profit", c.profile.pnl30 != null ? sg(c.profile.pnl30) : "—"]], chart(cs, px0[c.coin], t0, "SHORT", now), [evT(t0), `${c.coin} 1h candles · marker = ${utc(t0)}`], "#35e6b8");

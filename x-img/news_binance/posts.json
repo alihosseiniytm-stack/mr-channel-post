@@ -1,7 +1,7 @@
 {
  "event": "Binance hack",
  "t0": "2026-10-29T20:30:00.000Z",
- "built": "2026-10-30T13:14:08.102Z",
+ "built": "2026-10-30T13:30:30.985Z",
  "qualifyingShorts": 8,
  "topShorts": [
   {
@@ -11,12 +11,12 @@
    "notional": 21705010.55415,
    "lastOpenT": 1793241797105,
    "lastOpenPx": 79695,
-   "pnl": 832168.3888350001,
+   "pnl": 877651.0008250001,
    "px0": 80375,
    "now": {
     "szi": -292.53055,
     "entry": 79259,
-    "upnl": 568098.126145,
+    "upnl": 615575.83441,
     "lev": 3
    },
    "profile": {
@@ -33,12 +33,12 @@
    "notional": 8278625,
    "lastOpenT": 1793304512842,
    "lastOpenPx": 80375,
-   "pnl": 280308.3750000002,
+   "pnl": 290620.6250000002,
    "px0": 80375,
    "now": {
     "szi": -92.5,
     "entry": 80523.8,
-    "upnl": 296649.855349,
+    "upnl": 311644.105349,
     "lev": 40
    },
    "profile": {
@@ -55,12 +55,12 @@
    "notional": 7855873.7835,
    "lastOpenT": 1793290216409,
    "lastOpenPx": 81850,
-   "pnl": 293263.559505,
+   "pnl": 309292.037475,
    "px0": 80375,
    "now": {
     "szi": -89.46214,
     "entry": 81275.6,
-    "upnl": 354165.270572,
+    "upnl": 368461.320544,
     "lev": 40
    },
    "profile": {
@@ -72,18 +72,6 @@
   }
  ],
  "winners": [
-  {
-   "addr": "0x541e077ac38c56d7bf590924d249c60b0c80071d",
-   "coin": "ETH",
-   "pnl": 800318.9499999997,
-   "trades": 1,
-   "profile": {
-    "win": 0.4353448275862069,
-    "trades": 232,
-    "rank": 83,
-    "pnl30": 1920530.580937
-   }
-  },
   {
    "addr": "0x418aa6bf98a2b2bc93779f810330d88cde488888",
    "coin": "ETH",
@@ -107,6 +95,18 @@
     "rank": 79,
     "pnl30": 2114023.282491
    }
+  },
+  {
+   "addr": "0x77eeda199553e33b246e4b4666849b9ad0972902",
+   "coin": "ETH",
+   "pnl": 373358.0309770003,
+   "trades": 59,
+   "profile": {
+    "win": 0.984375,
+    "trades": 256,
+    "rank": 73,
+    "pnl30": 2326224.236805
+   }
   }
  ],
  "dips": [
@@ -117,7 +117,7 @@
    "notional": 4495300.000000003,
    "avg": 2247.6499999999987,
    "firstT": 1793359646558,
-   "chg": -0.8008364291592839,
+   "chg": -1.0321891753608845,
    "profile": {
     "win": 0.7142857142857143,
     "trades": 14,
@@ -132,7 +132,7 @@
    "notional": 3476532.7598100007,
    "avg": 2209.555089990934,
    "firstT": 1793315583974,
-   "chg": 0.9094550346399622,
+   "chg": 0.6741135388087083,
    "profile": {
     "win": 0.3870967741935484,
     "trades": 31,
@@ -147,7 +147,7 @@
    "notional": 2265910.1455900013,
    "avg": 79763.74581989372,
    "firstT": 1793306074667,
-   "chg": -3.0643568638474212,
+   "chg": -3.273725165553168,
    "profile": {
     "win": 0.9090909090909091,
     "trades": 11,
@@ -160,33 +160,33 @@
   {
    "n": 1,
    "type": "P1-shorts",
-   "text": "🐋🐋 Whales held big shorts before the Binance hack sell-off (from 20:30 UTC, Oct 29)\n🐋🐋 $21.7M BTC short · added 18 h before\n🐋 $8.3M BTC short · added 21 min before\n🐋 $7.9M BTC short · added 4 h before\nPublic Hyperliquid data 👇\nhttps://marketradarwhale.com/en/whale/0xdd53c5297309130ab5fe5623dc905752e3342b13/\n#BTC #crypto",
+   "text": "🐋🐋 Whales held big shorts before the Binance hack sell-off (from 20:30 UTC, Oct 29)\n🐋🐋 $21.7M BTC short · added 18 h before\n🐋 $8.3M BTC short · added 21 min before\n🐋 $7.9M BTC short · added 4 h before\nPublic on-chain whale data 👇\nhttps://marketradarwhale.com/en/whale/0xdd53c5297309130ab5fe5623dc905752e3342b13/\n#BTC #crypto",
    "file": "x-img/news_binance/P1_P1-shorts.png",
-   "tele": "🐋🐋 272 BTC SHORT ($21.7M) · last added 18 h before 20:30 UTC · still short ($22.6M) · est. P/L since then +$832K\n📊 No. 6 of Hyperliquid whales this month (+$22.4M) · 91% win rate over 468 trades\nhttps://marketradarwhale.com/en/whale/0xdd53c5297309130ab5fe5623dc905752e3342b13/\n\n🐋 103 BTC SHORT ($8.3M) · last added 21 min before 20:30 UTC · still short ($7.2M) · est. P/L since then +$280K\n📊 No. 42 of Hyperliquid whales this month (+$4.1M) · 77% win rate over 349 trades\nhttps://marketradarwhale.com/en/whale/0x418aa6bf98a2b2bc93779f810330d88cde488888/\n\n🐋 96.0 BTC SHORT ($7.9M) · last added 4 h before 20:30 UTC · still short ($6.9M) · est. P/L since then +$293K\n📊 No. 87 of Hyperliquid whales this month (+$1.8M) · 79% win rate over 693 trades\nhttps://marketradarwhale.com/en/whale/0xf58b673c1633ccef0ac58263cdc95ed80f817fc7/",
+   "tele": "🐋🐋 272 BTC SHORT ($21.7M) · last added 18 h before 20:30 UTC · still short ($22.6M) · est. P/L since then +$878K\n📊 No. 6 whale this month (+$22.4M) · 91% win rate over 468 trades\nhttps://marketradarwhale.com/en/whale/0xdd53c5297309130ab5fe5623dc905752e3342b13/\n\n🐋 103 BTC SHORT ($8.3M) · last added 21 min before 20:30 UTC · still short ($7.1M) · est. P/L since then +$291K\n📊 No. 42 whale this month (+$4.1M) · 77% win rate over 349 trades\nhttps://marketradarwhale.com/en/whale/0x418aa6bf98a2b2bc93779f810330d88cde488888/\n\n🐋 96.0 BTC SHORT ($7.9M) · last added 4 h before 20:30 UTC · still short ($6.9M) · est. P/L since then +$309K\n📊 No. 87 whale this month (+$1.8M) · 79% win rate over 693 trades\nhttps://marketradarwhale.com/en/whale/0xf58b673c1633ccef0ac58263cdc95ed80f817fc7/",
    "whale": "0xdd53c5297309130ab5fe5623dc905752e3342b13"
   },
   {
    "n": 2,
    "type": "P2-winners",
-   "text": "🏆 Biggest whale winners of the Binance hack crash (realized since 20:30 UTC)\n🐳 +$800K ETH realized\n🐳 +$574K ETH realized\n🦈 +$412K ETH realized\nhttps://marketradarwhale.com/en/whale/0x541e077ac38c56d7bf590924d249c60b0c80071d/\n#ETH #crypto",
+   "text": "🏆 Biggest whale winners of the Binance hack crash (realized since 20:30 UTC)\n🐳 +$574K ETH realized\n🦈 +$412K ETH realized\n🦈 +$373K ETH realized\nhttps://marketradarwhale.com/en/whale/0x418aa6bf98a2b2bc93779f810330d88cde488888/\n#ETH #crypto",
    "file": "x-img/news_binance/P2_P2-winners.png",
-   "tele": "+$800K ETH realized since 20:30 UTC · 1 fills\n📊 No. 83 of Hyperliquid whales this month (+$1.9M) · 44% win rate over 232 trades\nhttps://marketradarwhale.com/en/whale/0x541e077ac38c56d7bf590924d249c60b0c80071d/\n\n+$574K ETH realized since 20:30 UTC · 128 fills\n📊 No. 42 of Hyperliquid whales this month (+$4.1M) · 77% win rate over 349 trades\nhttps://marketradarwhale.com/en/whale/0x418aa6bf98a2b2bc93779f810330d88cde488888/\n\n+$412K ETH realized since 20:30 UTC · 400 fills\n📊 No. 79 of Hyperliquid whales this month (+$2.1M) · 71% win rate over 14 trades\nhttps://marketradarwhale.com/en/whale/0xf929122994e177079c924631ba13fb280f5cd1f9/",
-   "whale": "0x541e077ac38c56d7bf590924d249c60b0c80071d"
+   "tele": "+$574K ETH realized since 20:30 UTC · 128 fills\n📊 No. 42 whale this month (+$4.1M) · 77% win rate over 349 trades\nhttps://marketradarwhale.com/en/whale/0x418aa6bf98a2b2bc93779f810330d88cde488888/\n\n+$412K ETH realized since 20:30 UTC · 400 fills\n📊 No. 79 whale this month (+$2.1M) · 71% win rate over 14 trades\nhttps://marketradarwhale.com/en/whale/0xf929122994e177079c924631ba13fb280f5cd1f9/\n\n+$373K ETH realized since 20:30 UTC · 59 fills\n📊 No. 73 whale this month (+$2.3M) · 98% win rate over 256 trades\nhttps://marketradarwhale.com/en/whale/0x77eeda199553e33b246e4b4666849b9ad0972902/",
+   "whale": "0x418aa6bf98a2b2bc93779f810330d88cde488888"
   },
   {
    "n": 3,
    "type": "P3-dip",
-   "text": "🛒 Whales buying the Binance hack dip\n🐳 $4.5M ETH bought · avg $2,248 (now -0.8%)\n🐳 $3.5M ETH bought · avg $2,210 (now +0.9%)\n🐳 $2.3M BTC bought · avg $79,764 (now -3.1%)\nPublic Hyperliquid data 👇\nhttps://marketradarwhale.com/en/whale/0xf929122994e177079c924631ba13fb280f5cd1f9/\n#ETH #crypto",
+   "text": "🛒 Whales buying the Binance hack dip\n🐳 $4.5M ETH bought · avg $2,248 (-1.0% at 13:30 UTC)\n🐳 $3.5M ETH bought · avg $2,210 (+0.7% at 13:30 UTC)\n🐳 $2.3M BTC bought · avg $79,764 (-3.3% at 13:30 UTC)\nPublic on-chain whale data 👇\nhttps://marketradarwhale.com/en/whale/0xf929122994e177079c924631ba13fb280f5cd1f9/\n#ETH #crypto",
    "file": "x-img/news_binance/P3_P3-dip.png",
-   "tele": "$4.5M ETH LONG opened after 20:30 UTC · avg $2,248 · now -0.8%\n📊 No. 79 of Hyperliquid whales this month (+$2.1M) · 71% win rate over 14 trades\nhttps://marketradarwhale.com/en/whale/0xf929122994e177079c924631ba13fb280f5cd1f9/\n\n$3.5M ETH LONG opened after 20:30 UTC · avg $2,210 · now +0.9%\n📊 No. 49 of Hyperliquid whales this month (+$3.6M) · 39% win rate over 31 trades\nhttps://marketradarwhale.com/en/whale/0x880ac484a1743862989a441d6d867238c7aa311c/\n\n$2.3M BTC LONG opened after 20:30 UTC · avg $79,764 · now -3.1%\n📊 No. 57 of Hyperliquid whales this month (+$3.2M) · 91% win rate over 11 trades\nhttps://marketradarwhale.com/en/whale/0x77ee3604adbdefa66a817b3cf776412a6613a018/",
+   "tele": "$4.5M ETH LONG opened after 20:30 UTC · avg $2,248 · now -1.0%\n📊 No. 79 whale this month (+$2.1M) · 71% win rate over 14 trades\nhttps://marketradarwhale.com/en/whale/0xf929122994e177079c924631ba13fb280f5cd1f9/\n\n$3.5M ETH LONG opened after 20:30 UTC · avg $2,210 · now +0.7%\n📊 No. 49 whale this month (+$3.6M) · 39% win rate over 31 trades\nhttps://marketradarwhale.com/en/whale/0x880ac484a1743862989a441d6d867238c7aa311c/\n\n$2.3M BTC LONG opened after 20:30 UTC · avg $79,764 · now -3.3%\n📊 No. 57 whale this month (+$3.2M) · 91% win rate over 11 trades\nhttps://marketradarwhale.com/en/whale/0x77ee3604adbdefa66a817b3cf776412a6613a018/",
    "whale": "0xf929122994e177079c924631ba13fb280f5cd1f9"
   },
   {
    "n": 4,
    "type": "P4-selfcustody",
-   "text": "🔐 After the Binance hack: keep your funds in your own wallet.\nOn MarketRadar Whale you trade straight from your own wallet and follow the biggest Hyperliquid whales live.\nhttps://marketradarwhale.com/en/\n#crypto #selfcustody",
+   "text": "🔐 After the Binance hack: keep your funds in your own wallet.\nOn MarketRadar Whale you trade straight from your own wallet and follow the biggest whales live.\nhttps://marketradarwhale.com/en/\n#crypto #selfcustody",
    "file": "x-img/news_binance/P4_P4-selfcustody.png",
-   "tele": "🔐 After the Binance hack: keep your funds in your own wallet.\nOn MarketRadar Whale you trade straight from your own wallet and follow the biggest Hyperliquid whales live.\nhttps://marketradarwhale.com/en/",
+   "tele": "🔐 After the Binance hack: keep your funds in your own wallet.\nOn MarketRadar Whale you trade straight from your own wallet and follow the biggest whales live.\nhttps://marketradarwhale.com/en/",
    "whale": null
   }
  ]
