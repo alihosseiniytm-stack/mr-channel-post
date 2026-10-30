@@ -41,6 +41,19 @@ jobs:
           T=$(gh api "repos/${{ github.repository }}/actions/workflows/mkt-snapshot.yml/runs?per_page=1" --jq ".workflow_runs[0].created_at" 2>/dev/null || echo "")
           AGE=$(( $(date -u +%s) - $(date -u -d "${T:-1970-01-01T00:00:00Z}" +%s) ))
           if [ "$AGE" -gt 1680 ]; then gh workflow run mkt-snapshot.yml -R "${{ github.repository }}" && echo "mkt-snapshot dispatched (last run ${AGE}s ago)"; else echo "mkt-snapshot ran ${AGE}s ago, ok"; fi
+      - name: kick x-post (mode=live) when its newest run is older than 19 min (GitHub never fired its */20 cron; T50-09 fix-deploy-2 2026-10-30)
+        # Plan B for the X poster: this job already runs every minute (Apps Script trigger). Plan C = the cron in x-post.yml. Double fire is safe:
+        # x-post.yml has concurrency x-post and x_post.mjs keeps spacing >= 2 h + a daily cap. Checks only at minute % 5 == 0 (<= 288 API reads/day, <= 72 dispatches/day).
+        # Stop: repo variable X_KICK=off (X_POST_LIVE=false still keeps every run dry).
+        if: ${{ vars.X_KICK != 'off' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ $(( 10#$(date -u +%M) % 5 )) -eq 0 ] || { echo "x-post kick: not a check minute"; exit 0; }
+          T=$(gh api "repos/${{ github.repository }}/actions/workflows/x-post.yml/runs?per_page=1" --jq ".workflow_runs[0].created_at" 2>/dev/null || echo "")
+          AGE=$(( $(date -u +%s) - $(date -u -d "${T:-1970-01-01T00:00:00Z}" +%s) ))
+          if [ "$AGE" -gt 1140 ]; then gh workflow run x-post.yml -R "${{ github.repository }}" -f mode=live && echo "x-post kick: dispatched mode=live (last run ${AGE}s ago)"; else echo "x-post kick: last run ${AGE}s ago, ok"; fi
       - run: mkdir -p public/vendor public/icons public/status && cp ../vendor/*.js public/vendor/ && cp icons/*.png public/icons/ && cp status/index.html public/status/index.html
       - name: upload to mr-static (3 attempts, waits 20 s then 40 s; Cloudflare API blips 10013/10500 on assets-upload-session, FOLLOWUPS 84 + T10-35)
         run: |
