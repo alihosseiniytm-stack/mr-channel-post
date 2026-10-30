@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: dry | draft | live | drafts-list | drafts-delete
+        description: dry | draft | live | extra-pinned | extra-weekly | drafts-list | drafts-delete
         default: dry
       n:
         description: posts in this run
@@ -15,6 +15,9 @@ on:
       min:
         description: min opened USD (default 1000000)
         default: "1000000"
+      thread:
+        description: "draft/live: make the LAST post a thread (main without link + reply with the whale link): true|false"
+        default: "false"
       ids:
         description: drafts-delete only, space separated Buffer post ids
         default: ""
@@ -51,7 +54,8 @@ jobs:
         run: |
           git config user.name "x-post-bot"; git config user.email "bot@users.noreply.github.com"
           MODE="${{ github.event.inputs.mode || 'live' }}"
-          node x_post.mjs --n "${{ github.event.inputs.n || 1 }}" --mode "$MODE" --min "${{ github.event.inputs.min || 1000000 }}" $([ "$MODE" = dry ] || echo --save)
+          case "$MODE" in extra-*) node x_extra.mjs draft "${MODE#extra-}"; exit 0;; esac
+          node x_post.mjs $([ "${{ github.event.inputs.thread }}" = true ] && echo --thread) --n "${{ github.event.inputs.n || 1 }}" --mode "$MODE" --min "${{ github.event.inputs.min || 1000000 }}" $([ "$MODE" = dry ] || echo --save)
       - name: save state
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
         run: |

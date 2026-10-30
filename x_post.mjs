@@ -4,11 +4,11 @@
 // Old queue version kept as x_post.old-20261030.mjs.
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
-import { CFG, usd, short, makeText, isDup, canPost, countReq, recordPost, emptyState, dayIndex, rampCap } from "./x_lib.mjs";
+import { CFG, qualifies, wlabel, usd, short, makeText, isDup, canPost, countReq, recordPost, emptyState, dayIndex, rampCap } from "./x_lib.mjs";
 import { renderCard, closeCards } from "./x_card.mjs";
 
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
-const N = Number(arg("n", 1)), MODE = arg("mode", "dry"), MIN = Number(arg("min", CFG.MIN_MOVE_USD));
+const N = Number(arg("n", 1)), THREAD = process.argv.includes("--thread"), MODE = arg("mode", "dry"), MIN = Number(arg("min", CFG.MIN_MOVE_USD));
 const BASE = "https://marketradarwhale.com", RAW = "https://raw.githubusercontent.com/alihosseiniytm-stack/mr-channel-post/main/";
 const HIST = "x_history.json", STATE = "x_state.json";
 const load = (f, d) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")) : d);
@@ -20,8 +20,8 @@ const hl = (body) => fetch("https://api.hyperliquid.xyz/info", { method: "POST",
 export async function findEvents(now = Date.now()) {
   const [feed, lb] = await Promise.all([fetch(BASE + "/whale-feed").then((r) => r.json()), fetch(BASE + "/whale-leaderboard?limit=100").then((r) => r.json())]);
   const rank = new Map(lb.sort((a, b) => b.pnl - a.pnl).map((w, i) => [w.address.toLowerCase(), { rank: i + 1, ...w }]));
-  const cands = feed.filter((p) => !p.coin.includes(":") && p.value >= MIN).sort((a, b) => b.value - a.value).slice(0, 14);
-  const fills = new Map(), out = [];
+  const cands = feed.filter((p) => !p.coin.includes(":") && p.value >= MIN).sort((a, b) => b.value - a.value).slice(0, 40);
+  const fills = new Map(), out = [], mids = await hl({ type: "allMids" });
   for (const p of cands) {
     if (!fills.has(p.address)) fills.set(p.address, await hl({ type: "userFills", user: p.address }).catch(() => []));
     const f = fills.get(p.address).filter((x) => x.coin === p.coin && /^Open (Long|Short)$/.test(x.dir) && x.time >= now - CFG.FRESH_MS);
@@ -30,10 +30,12 @@ export async function findEvents(now = Date.now()) {
     const sizeCoin = same.reduce((s, x) => s + Number(x.sz), 0), notional = same.reduce((s, x) => s + Number(x.sz) * Number(x.px), 0);
     if (notional < MIN) continue;
     const r = rank.get(p.address.toLowerCase());
+    const st = await fetch(BASE + "/whale-stats?addr=" + p.address).then((x) => x.json()).catch(() => null);
     let pnlMonth, pnlAll;
     if (!r) { const pf = await hl({ type: "portfolio", user: p.address }).catch(() => null); const g = (k) => Number(pf?.find((x) => x[0] === k)?.[1].pnlHistory.at(-1)?.[1]); pnlMonth = g("month"); pnlAll = g("allTime"); if (!isFinite(pnlMonth)) pnlMonth = pnlAll = undefined; }
-    out.push({ pnlMonth, pnlAll, address: p.address, coin: p.coin, side: dir, sizeCoin, notional, lev: p.leverage, entry: notional / sizeCoin, fillT: Math.max(...same.map((x) => x.time)),
-      label: r?.displayName || "Whale " + short(p.address), rank: r?.rank, pnl30: r?.pnl, roi: r?.roi });
+    if (!qualifies(st, r ? r.pnl : pnlMonth)) { console.log("SKIP whale quality:", short(p.address), st ? `${st.trades} trades ${Math.round(st.winRate * 100)}% win` : "no stats", "30d", r ? Math.round(r.pnl) : pnlMonth); continue; }
+    out.push({ now: +mids[p.coin], win: st.winRate, trades: st.trades, pnlMonth, pnlAll, address: p.address, coin: p.coin, side: dir, sizeCoin, notional, lev: p.leverage, entry: notional / sizeCoin, fillT: Math.max(...same.map((x) => x.time)),
+      label: wlabel(st), rank: r?.rank, pnl30: r?.pnl, roi: r?.roi });
   }
   return out.sort((a, b) => b.fillT - a.fillT);
 }
@@ -62,7 +64,7 @@ if (process.argv[1].endsWith("x_post.mjs")) {
   const stamp = new Date(now).toISOString().slice(0, 16).replace(/\D/g, "");
   const files = [];
   for (const [i, { m }] of picks.entries()) {
-    const candles = (await hl({ type: "candleSnapshot", req: { coin: m.coin, interval: "15m", startTime: now - 24 * 3600e3 } })).map((c) => ({ t: c.t, o: +c.o, h: +c.h, l: +c.l, c: +c.c }));
+    const candles = (await hl({ type: "candleSnapshot", req: { coin: m.coin, interval: "15m", startTime: now - 13 * 3600e3 } })).map((c) => ({ t: c.t, o: +c.o, h: +c.h, l: +c.l, c: +c.c }));
     const f = `x-img/${stamp}-${i}-${m.coin}.png`; await renderCard(m, candles, f); files.push(f);
   }
   await closeCards();
@@ -70,7 +72,9 @@ if (process.argv[1].endsWith("x_post.mjs")) {
     execFileSync("git", ["add", "x-img"]); try { execFileSync("git", ["commit", "-m", "x images " + stamp]); execFileSync("git", ["pull", "--rebase"]); execFileSync("git", ["push"]); } catch (e) { console.log("git:", e.message.slice(0, 200)); }
   }
   const cid = MODE === "dry" ? null : process.env.BUFFER_CHANNEL_ID;
-  for (const [i, { m, post }] of picks.entries()) {
+  for (const [i, { m }] of picks.entries()) {
+    const isT = THREAD && i === picks.length - 1; // --thread: only the LAST post of the run is a thread (main without link + reply with link), the others keep the link in the post
+    const post = makeText(m, undefined, isT);
     console.log("POST", i, `(fill ${((now - m.fillT) / 60000).toFixed(0)} min old)\n` + post.text + "\nimage: " + files[i]);
     if (MODE !== "dry") {
       if (MODE === "live") { const c = canPost(state, Date.now()); if (!c.ok) { console.log("SKIP:", c.why); break; } }
@@ -78,6 +82,7 @@ if (process.argv[1].endsWith("x_post.mjs")) {
       const q = `mutation($i:CreatePostInput!){createPost(input:$i){... on PostActionSuccess{post{id status}} ... on MutationError{message}}}`;
       const input = { text: post.text, channelId: cid, schedulingType: "automatic", mode: MODE === "live" ? "shareNow" : "addToQueue", assets: [{ image: { url: RAW + files[i] } }] };
       if (MODE === "draft") input.saveToDraft = true;
+      if (isT) input.metadata = { twitter: { thread: [{ text: post.text, assets: input.assets }, { text: post.reply }] } }; // main post without link + reply with the whale page link
       const res = await gql(q, { i: input });
       if (res.createPost.message) throw new Error("createPost: " + res.createPost.message);
       console.log("buffer id", res.createPost.post.id, res.createPost.post.status);

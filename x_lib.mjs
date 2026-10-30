@@ -4,6 +4,7 @@ export const CFG = {
   FRESH_MS: 2 * 3600e3,     // data of THAT moment: fill must be <= 2 h old
   SPACING_MS: 2 * 3600e3,   // >= 2 h between posts
   REQ_HARD_STOP: 80,        // Buffer free: 100 requests / 24 h -> stop at 80
+  MIN_TRADES: 10, MIN_WIN: 0.55, // whale quality gate (owner-approved 10-30 11:05Z): positive 30d profit AND win rate >= 55% over >= 10 closed trades (/whale-stats)
   REQ_PER_POST: 3,          // budget reserved per post (createPost = 1 in practice)
 };
 export const usd = (n) => { const a = Math.abs(n); return "$" + (a >= 1e9 ? (a / 1e9).toFixed(2) + "B" : a >= 1e6 ? (a / 1e6).toFixed(a >= 1e8 ? 0 : 1) + "M" : a >= 1e3 ? (a / 1e3).toFixed(0) + "K" : a.toFixed(0)); };
@@ -17,18 +18,21 @@ const norm = (t) => t.toLowerCase().replace(/https?:\/\/\S+/g, "").replace(/[^a-
 export const sim = (a, b) => { const A = new Set(norm(a)), B = new Set(norm(b)); let i = 0; for (const x of A) if (B.has(x)) i++; return i / (A.size + B.size - i || 1); };
 export const isDup = (text, key, h) => h.some((p) => p.key === key || sim(p.text, text) >= 0.8);
 
+export const qualifies = (st, pnl30) => !!st && st.trades >= CFG.MIN_TRADES && st.winRate >= CFG.MIN_WIN && pnl30 > 0;
+export const wlabel = (st) => `Whale · ${Math.round(st.winRate * 100)}% win rate`;
+
 // m = {address, coin, side:"LONG"|"SHORT", sizeCoin, notional, lev, entry, label, rank, pnl30, roi}
-export function makeText(m, base = "https://marketradarwhale.com") {
+export function makeText(m, base = "https://marketradarwhale.com", thread = false) {
   const url = `${base}/en/whale/${m.address}/`;
   const act = `${m.side} opened${m.lev ? ` at ${m.lev}x` : ""}`;
-  const rec = m.rank ? `📊 Track record: No. ${m.rank} of Hyperliquid whales this month, ${sg(m.pnl30)} profit${m.roi != null ? ` (${Math.round(m.roi * 100)}% ROI)` : ""}`
-                     : m.pnlMonth != null ? `📊 Track record: ${sg(m.pnlMonth)} this month, ${sg(m.pnlAll)} all-time on Hyperliquid` : `📊 Track record: full trade history on its page`;
+  const wr = m.win != null ? ` · ${Math.round(m.win * 100)}% win rate (${m.trades} trades)` : "";
+  const rec = m.rank ? `📊 Track record: No. ${m.rank} of Hyperliquid whales this month, ${sg(m.pnl30)} profit${wr}`
+                     : m.pnlMonth != null ? `📊 Track record: ${sg(m.pnlMonth)} this month${wr}` : `📊 Track record: full trade history on its page`;
   const text = `${sizeEmoji(m.notional)} ${qty(m.sizeCoin)} ${m.coin} (${usd(m.notional)}) ${act}
 Entry $${px(m.entry)} · ${m.label}
 ${rec}
-${url}
-#${m.coin} #crypto`;
-  return { text, url, key: m.address + ":" + m.coin + ":" + m.side };
+${thread ? "" : url + "\n"}#${m.coin} #crypto`;
+  return { text, url, reply: thread ? `Full trade history of this whale 👇\n${url}` : null, key: m.address + ":" + m.coin + ":" + m.side };
 }
 
 export const dayKey = (t) => new Date(t).toISOString().slice(0, 10);
