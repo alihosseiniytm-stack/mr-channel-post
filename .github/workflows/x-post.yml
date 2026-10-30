@@ -1,9 +1,9 @@
 name: x-post
 # X posts via Buffer (free plan API), EVENT-TRIGGERED: a whale opened/added >= $1M in the last 2 h -> shareNow (ramp cap/day, spacing >= 2 h, Buffer request counter stop at 80/day).
-# SWITCH IS OFF: the schedule below is COMMENTED OUT and live mode also needs repo variable X_POST_LIVE=true. To go live: uncomment the cron AND set X_POST_LIVE=true.
+# SWITCH IS ON since 2026-10-30 (owner yes 11:45Z, vizier 6). To stop: comment the cron OR set repo variable X_POST_LIVE=false.
 on:
-  # schedule:
-  #   - cron: "*/20 * * * *"
+  schedule:
+    - cron: "*/20 * * * *"
   workflow_dispatch:
     inputs:
       mode:
