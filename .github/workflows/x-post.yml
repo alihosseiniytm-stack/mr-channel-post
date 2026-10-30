@@ -10,6 +10,9 @@ on:
       mode:
         description: dry | draft | queue
         default: draft
+      n:
+        description: posts in this run
+        default: "1"
 permissions:
   contents: write
 concurrency: x-post
