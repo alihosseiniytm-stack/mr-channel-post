@@ -1,0 +1,41 @@
+name: x-post
+# Posts whale longs to X through Buffer (free plan API). Scheduled runs stay DRY until the owner approves: set repo variable X_POST_LIVE=true.
+on:
+  schedule:
+    - cron: "10 8 * * *"
+    - cron: "10 14 * * *"
+    - cron: "10 19 * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: dry | draft | queue
+        default: draft
+permissions:
+  contents: write
+concurrency: x-post
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - run: sudo apt-get update && sudo apt-get install -y fonts-noto-core fonts-noto-color-emoji
+      - run: npx playwright-core install --with-deps chromium
+      - name: post (1 post per run = 3 a day; any error fails the run = GitHub email)
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
+        run: |
+          git config user.name "x-post-bot"; git config user.email "bot@users.noreply.github.com"
+          MODE="${{ github.event.inputs.mode }}"
+          if [ -z "$MODE" ]; then
+            if [ "${{ vars.X_POST_LIVE }}" = "true" ]; then MODE=queue; else echo "X_POST_LIVE not true: dry run only"; MODE=dry; fi
+          fi
+          node x_post.mjs --n 1 --mode "$MODE" $([ "$MODE" = dry ] || echo --save)
+      - name: save history
+        run: |
+          git add x_history.json x-img || true
+          git commit -m "x history $(date -u +%FT%TZ)" || exit 0
+          git pull --rebase && git push
