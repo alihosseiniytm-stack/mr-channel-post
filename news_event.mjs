@@ -62,7 +62,7 @@ async function profile(addr) { // track record: leaderboard rank/30d profit + wi
   const i = lb.sort((a, b) => b.pnl - a.pnl).findIndex((w) => w.address.toLowerCase() === addr);
   return { win: st?.winRate, trades: st?.trades, rank: i >= 0 ? i + 1 : null, pnl30: i >= 0 ? lb[i].pnl : null };
 }
-const rec = (p) => (p.rank ? `No. ${p.rank} whale this month (${sg(p.pnl30)})` : "") + (p.win != null && p.trades >= 5 ? `${p.rank ? " · " : ""}${Math.round(p.win * 100)}% win rate over ${p.trades} trades` : "");
+const rec = (p) => (p.rank ? `No. ${p.rank} on the Radar Top 100 this month (${sg(p.pnl30)})` : "") + (p.win != null && p.trades >= 5 ? `${p.rank ? " · " : ""}${Math.round(p.win * 100)}% win rate over ${p.trades} trades` : "");
 const wurl = (a) => `${BASE}/en/whale/${a}/`;
 const fit = (variants, max = 280) => { for (const v of variants) { const n = v.replace(/https?:\/\/\S+/g, "x".repeat(23)).length; if (n <= max) return v; } return variants.at(-1); };
 
