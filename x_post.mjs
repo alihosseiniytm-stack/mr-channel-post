@@ -28,7 +28,7 @@ export function makePost(p, i) {
   const hook = HOOKS[(new Date().getUTCDate() * 3 + i) % HOOKS.length];
   const when = new Date(p.time).toISOString().slice(0, 16).replace("T", " ") + " UTC";
   const url = `${BASE}/en/whale/${p.address}/`;
-  const text = `${hook} ${usd(p.value)} LONG ${p.coin} at ${p.leverage}x, entry $${px(Number(p.entryPx))}.\nWallet ${short(p.address)} · seen ${when}\nLive whale tracker: ${url}\n${TAGS(p.coin)}`;
+  const text = `${hook} ${usd(p.value)} LONG ${p.coin} at ${p.leverage}x, entry $${px(Number(p.entryPx))}.\nWallet ${short(p.address)} · seen ${when}\nMarketRadar Whale tracker: ${url}\n${TAGS(p.coin)}`;
   return { text, url, key: p.address + ":" + p.coin };
 }
 
@@ -50,7 +50,7 @@ async function pick() {
 }
 
 function render(p, file) {
-  const d = { title: "Whale long · " + p.coin, date: new Date(p.time).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }), dir: "ltr", footer: "Wallet " + short(p.address),
+  const d = { title: "Whale long · " + p.coin, date: new Date(p.time).toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }), dir: "ltr", footer: "MarketRadar Whale · wallet " + short(p.address),
     cards: [{ title: "Whale position", rows: [
       { name: "LONG " + p.coin, value: usd(p.value), change: p.leverage + "x", side: "up" },
       { name: "Entry price", value: "$" + px(Number(p.entryPx)), change: "", side: "up" },
