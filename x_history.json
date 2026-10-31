@@ -1,11 +1,5 @@
 [
  {
-  "key": "0x9ffdf919da72213588f7517598394cc5535bce40:ZEC",
-  "text": "Big wallet, big conviction: $10.6M LONG ZEC at 5x, entry $1252.\nWallet 0x9ffd…ce40 · seen 2026-10-30 08:26 UTC\nMarketRadar Whale tracker: https://marketradarwhale.com/en/whale/0x9ffdf919da72213588f7517598394cc5535bce40/\n#ZEC #crypto #whales",
-  "at": "2026-10-30T08:34:18.851Z",
-  "file": "x-img/2026103008-0-ZEC.png"
- },
- {
   "key": "0xcafe9392d902f6f517b1573371923ebf7ffa7b3b:BTC",
   "text": "Whale radar spotted this long: $5.5M LONG BTC at 10x, entry $81153.\nWallet 0xcafe…7b3b · seen 2026-10-30 08:26 UTC\nMarketRadar Whale tracker: https://marketradarwhale.com/en/whale/0xcafe9392d902f6f517b1573371923ebf7ffa7b3b/\n#BTC #crypto #whales",
   "at": "2026-10-30T08:34:19.199Z",
@@ -92,6 +86,13 @@
   "text": "🦈 259,728 NEAR ($1.2M) LONG opened at 3x\nEntry $4.53 · Whale · 62% win rate\n📊 Track record: +$1.2M this month · 62% win rate (395 trades)\nhttps://marketradarwhale.com/en/whale/0x17c3c8fdbcb7d1b240ce08965e09b1fc91cba868/\n#NEAR #crypto",
   "at": "2026-10-31T18:52:43.911Z",
   "file": "x-img/202610311852-0-NEAR.png",
+  "mode": "live"
+ },
+ {
+  "key": "0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2:ETH:LONG",
+  "text": "🐳 1572 ETH ($3.6M) LONG opened at 20x\nEntry $2,263 · Whale · 57% win rate\n📊 Track record: +$488K this month · 57% win rate (841 trades)\nhttps://marketradarwhale.com/en/whale/0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2/\n#ETH #crypto",
+  "at": "2026-10-31T22:41:22.613Z",
+  "file": "x-img/202610312241-0-ETH.png",
   "mode": "live"
  }
 ]
