@@ -1,11 +1,5 @@
 [
  {
-  "key": "0xcafe9392d902f6f517b1573371923ebf7ffa7b3b:BTC",
-  "text": "Whale radar spotted this long: $5.5M LONG BTC at 10x, entry $81153.\nWallet 0xcafe…7b3b · seen 2026-10-30 08:26 UTC\nMarketRadar Whale tracker: https://marketradarwhale.com/en/whale/0xcafe9392d902f6f517b1573371923ebf7ffa7b3b/\n#BTC #crypto #whales",
-  "at": "2026-10-30T08:34:19.199Z",
-  "file": "x-img/2026103008-1-BTC.png"
- },
- {
   "key": "0xbf732ea04197942783e34730ed6e0f6099575d58:HYPE",
   "text": "Someone is betting big on the upside: $1.7M LONG HYPE at 10x, entry $89.68.\nWallet 0xbf73…5d58 · seen 2026-10-30 01:55 UTC\nMarketRadar Whale tracker: https://marketradarwhale.com/en/whale/0xbf732ea04197942783e34730ed6e0f6099575d58/\n#HYPE #crypto #whales",
   "at": "2026-10-30T08:34:19.597Z",
@@ -93,6 +87,13 @@
   "text": "🐳 1572 ETH ($3.6M) LONG opened at 20x\nEntry $2,263 · Whale · 57% win rate\n📊 Track record: +$488K this month · 57% win rate (841 trades)\nhttps://marketradarwhale.com/en/whale/0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2/\n#ETH #crypto",
   "at": "2026-10-31T22:41:22.613Z",
   "file": "x-img/202610312241-0-ETH.png",
+  "mode": "live"
+ },
+ {
+  "key": "0xecb63caa47c7c4e77f60f1ce858cf28dc2b82b00:ETH:SHORT",
+  "text": "🦈 731 ETH ($1.7M) SHORT opened at 15x\nEntry $2,267 · Whale · 72% win rate\n📊 Track record: No. 7 on the Radar Top 100 this month, +$20.7M profit · 72% win rate (921 trades)\nhttps://marketradarwhale.com/en/whale/0xecb63caa47c7c4e77f60f1ce858cf28dc2b82b00/\n#ETH #crypto",
+  "at": "2026-11-01T01:41:36.895Z",
+  "file": "x-img/202611010141-0-ETH.png",
   "mode": "live"
  }
 ]
