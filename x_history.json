@@ -1,12 +1,5 @@
 [
  {
-  "key": "0x9ffdf919da72213588f7517598394cc5535bce40:ZEC:LONG",
-  "text": "🦈 202 ZEC ($252K) LONG opened at 5x\nEntry $1,248 · Whale 0x9ffd…ce40\n📊 Track record: +$326K this month, +$5.1M all-time on Hyperliquid\nhttps://marketradarwhale.com/en/whale/0x9ffdf919da72213588f7517598394cc5535bce40/\n#ZEC #crypto",
-  "at": "2026-10-30T09:40:53.712Z",
-  "file": "x-img/202610300940-0-ZEC.png",
-  "mode": "draft"
- },
- {
   "key": "0x2e30c32738a28833e3d85189c04895c25ee54cb5:ZEC:SHORT",
   "text": "🦈 333 ZEC ($417K) SHORT opened at 2x\nEntry $1,250 · Whale 0x2e30…4cb5\n📊 Track record: +$857K this month, -$312K all-time on Hyperliquid\nhttps://marketradarwhale.com/en/whale/0x2e30c32738a28833e3d85189c04895c25ee54cb5/\n#ZEC #crypto",
   "at": "2026-10-30T09:40:54.103Z",
@@ -95,6 +88,13 @@
   "text": "🦈 13.9 BTC ($1.1M) SHORT opened at 12x\nEntry $78,110 · Whale · 100% win rate\n📊 Track record: No. 27 on the Radar Top 100 this month, +$5.6M profit · 100% win rate (889 trades)\nhttps://marketradarwhale.com/en/whale/0xd4c1f7e8d876c4749228d515473d36f919583d1d/\n#BTC #crypto",
   "at": "2026-11-01T10:11:27.762Z",
   "file": "x-img/202611011011-0-BTC.png",
+  "mode": "live"
+ },
+ {
+  "key": "0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2:SOL:SHORT",
+  "text": "🦈 11,403 SOL ($1.1M) SHORT opened at 10x\nEntry $94.89 · Whale · 61% win rate\n📊 Track record: +$556K this month · 61% win rate (869 trades)\nhttps://marketradarwhale.com/en/whale/0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2/\n#SOL #crypto",
+  "at": "2026-11-01T13:51:35.399Z",
+  "file": "x-img/202611011351-0-SOL.png",
   "mode": "live"
  }
 ]
