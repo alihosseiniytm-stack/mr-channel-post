@@ -1,12 +1,5 @@
 [
  {
-  "key": "0x3bcae23e8c380dab4732e9a159c0456f12d866f3:BTC:LONG",
-  "text": "🐳 45.7 BTC ($3.5M) LONG opened at 40x\nEntry $77,563 · Whale · 61% win rate\n📊 Track record: +$778K this month · 61% win rate (187 trades)\nhttps://marketradarwhale.com/en/whale/0x3bcae23e8c380dab4732e9a159c0456f12d866f3/\n#BTC #crypto",
-  "at": "2026-10-30T16:52:51.248Z",
-  "file": "x-img/202610301652-0-BTC.png",
-  "mode": "live"
- },
- {
   "key": "0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2:BTC:SHORT",
   "text": "🐳 48.1 BTC ($3.7M) SHORT opened at 20x\nEntry $76,774 · Whale · 57% win rate\n📊 Track record: +$588K this month · 57% win rate (904 trades)\nhttps://marketradarwhale.com/en/whale/0x7b7f72a28fe109fa703eeed7984f2a8a68fedee2/\n#BTC #crypto",
   "at": "2026-10-30T20:01:12.453Z",
@@ -95,6 +88,13 @@
   "text": "🦈 1692 XMR ($1.1M) LONG opened at 3x\nEntry $627.9 · Whale · 92% win rate\n📊 Track record: No. 84 on the Radar Top 100 this month, +$1.8M profit · 92% win rate (158 trades)\nhttps://marketradarwhale.com/en/whale/0x4c6d679eac539bf7c5a0b7ebd8949ae93b1e5ee9/\n#XMR #crypto",
   "at": "2026-11-03T10:31:01.209Z",
   "file": "x-img/202611031030-0-XMR.png",
+  "mode": "live"
+ },
+ {
+  "key": "0x413c2724b62975c18b1415650f998a8f0a67886c:ZEC:LONG",
+  "text": "🐳 2250 ZEC ($2.7M) LONG opened at 10x\nEntry $1,205 · Whale · 61% win rate\n📊 Track record: +$87K this month · 61% win rate (23 trades)\nhttps://marketradarwhale.com/en/whale/0x413c2724b62975c18b1415650f998a8f0a67886c/\n#ZEC #crypto",
+  "at": "2026-11-03T13:22:19.720Z",
+  "file": "x-img/202611031322-0-ZEC.png",
   "mode": "live"
  }
 ]
