@@ -1,12 +1,5 @@
 [
  {
-  "key": "0xd4c1f7e8d876c4749228d515473d36f919583d1d:ZEC:SHORT",
-  "text": "🦈 1050 ZEC ($1.3M) SHORT opened at 10x\nEntry $1,274 · Whale · 100% win rate\n📊 Track record: No. 29 on the Radar Top 100 this month, +$4.7M profit · 100% win rate (889 trades)\nhttps://marketradarwhale.com/en/whale/0xd4c1f7e8d876c4749228d515473d36f919583d1d/\n#ZEC #crypto",
-  "at": "2026-11-02T04:11:10.816Z",
-  "file": "x-img/202611020410-0-ZEC.png",
-  "mode": "live"
- },
- {
   "key": "0x5647249079e257329ecb6f46ed41821d3c69e7de:HYPE:SHORT",
   "text": "🦈 12,539 HYPE ($1.1M) SHORT opened at 10x\nEntry $85.85 · Whale · 89% win rate\n📊 Track record: No. 34 on the Radar Top 100 this month, +$3.9M profit · 89% win rate (432 trades)\nhttps://marketradarwhale.com/en/whale/0x5647249079e257329ecb6f46ed41821d3c69e7de/\n#HYPE #crypto",
   "at": "2026-11-02T10:51:33.502Z",
@@ -95,6 +88,13 @@
   "text": "🐳 858 ETH ($2.0M) SHORT opened at 25x\nEntry $2,335 · Whale · 100% win rate\n📊 Track record: No. 75 on the Radar Top 100 this month, +$2.1M profit · 100% win rate (23 trades)\nhttps://marketradarwhale.com/en/whale/0xb1ec7febea4f841d525785955b7fe0e812d6e86a/\n#ETH #crypto",
   "at": "2026-11-04T11:41:28.617Z",
   "file": "x-img/202611041141-0-ETH.png",
+  "mode": "live"
+ },
+ {
+  "key": "0x9ffdf919da72213588f7517598394cc5535bce40:ZEC:LONG",
+  "text": "🦈 845 ZEC ($1.1M) LONG opened at 5x\nEntry $1,318 · Whale · 59% win rate\n📊 Track record: +$1.0M this month · 59% win rate (138 trades)\nhttps://marketradarwhale.com/en/whale/0x9ffdf919da72213588f7517598394cc5535bce40/\n#ZEC #crypto",
+  "at": "2026-11-04T15:42:11.235Z",
+  "file": "x-img/202611041541-0-ZEC.png",
   "mode": "live"
  }
 ]
