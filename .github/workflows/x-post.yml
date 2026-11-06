@@ -56,9 +56,17 @@ jobs:
           MODE="${{ github.event.inputs.mode || 'live' }}"
           case "$MODE" in extra-*) node x_extra.mjs draft "${MODE#extra-}"; exit 0;; esac
           node x_post.mjs $([ "${{ github.event.inputs.thread }}" = true ] && echo --thread) --n "${{ github.event.inputs.n || 1 }}" --mode "$MODE" --min "${{ github.event.inputs.min || 1000000 }}" $([ "$MODE" = dry ] || echo --save)
+      - name: big transfer post (T30-25)
+        if: "!startsWith(github.event.inputs.mode, 'drafts-') && !startsWith(github.event.inputs.mode, 'extra-')"
+        continue-on-error: true
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
+          X_POST_LIVE: ${{ vars.X_POST_LIVE }}
+        run: node x_bigtx.mjs --mode "${{ github.event.inputs.mode || 'live' }}" --min "${{ vars.X_BIGTX_MIN || '20000000' }}"
       - name: save state
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
         run: |
-          git add x_history.json x_state.json x-img || true
+          git add x_history.json x_state.json x_bigtx_posted.json x-img 2>/dev/null || true
           git commit -m "x state $(date -u +%FT%TZ)" || exit 0
           for i in 1 2 3; do git pull --rebase -q && git push && exit 0; echo "push try $i rejected, retry"; sleep $((i*7)); done; exit 1  # T10-63: other workflows push main too (race)
