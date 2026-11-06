@@ -18,4 +18,6 @@ jobs:
           git config user.name "mr-snapshot"
           git config user.email "mr-snapshot@users.noreply.github.com"
           git add data
-          git diff --cached --quiet || (git commit -m "market snapshot" && git push)
+          git diff --cached --quiet && exit 0
+          git commit -m "market snapshot"
+          for i in 1 2 3; do git pull --rebase -q && git push && exit 0; echo "push try $i rejected, retry"; sleep $((i*7)); done; exit 1  # T10-63: other workflows push main too (race)
