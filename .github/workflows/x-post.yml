@@ -61,4 +61,4 @@ jobs:
         run: |
           git add x_history.json x_state.json x-img || true
           git commit -m "x state $(date -u +%FT%TZ)" || exit 0
-          git pull --rebase && git push
+          for i in 1 2 3; do git pull --rebase -q && git push && exit 0; echo "push try $i rejected, retry"; sleep $((i*7)); done; exit 1  # T10-63: other workflows push main too (race)
