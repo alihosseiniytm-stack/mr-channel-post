@@ -75,6 +75,21 @@
      "reason": "family served with a different CSS stack than its majority (two generators/builds) - S0 baseline 2026-10-21; removed by S1 shell migration",
      "pages": 83,
      "example": "/ar/free-crypto-signals/"
+    },
+    "js:bigtx.*.js+site.*.js+wbar.*.js": {
+     "reason": "page-own script by design (T30-25 big tx, T31-13 liquidation map, T31-22 whale alerts; 2026-11-05/06): one extra page script on top of the shell set - vizier 18 2026-11-07",
+     "pages": 7,
+     "example": "/en/big-transactions/"
+    },
+    "js:liqmap.*.js+site.*.js+wbar.*.js": {
+     "reason": "page-own script by design (T30-25 big tx, T31-13 liquidation map, T31-22 whale alerts; 2026-11-05/06): one extra page script on top of the shell set - vizier 18 2026-11-07",
+     "pages": 7,
+     "example": "/en/liquidation-map/"
+    },
+    "js:site.*.js+wa.*.js+wbar.*.js": {
+     "reason": "page-own script by design (T30-25 big tx, T31-13 liquidation map, T31-22 whale alerts; 2026-11-05/06): one extra page script on top of the shell set - vizier 18 2026-11-07",
+     "pages": 7,
+     "example": "/en/whale-alerts/"
     }
    }
   },
