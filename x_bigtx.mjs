@@ -10,9 +10,13 @@ const MODE = arg("mode", "dry"), MIN = Number(arg("min", 20e6)), SRC = "https://
 const STATE = "x_state.json", POSTED = "x_bigtx_posted.json";
 const load = (f, d) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")) : d);
 
+// vizier 18 2026-11-07 (owner: 2 big-tx posts a day): skip internal moves + same-tx round trips (DeFi flash loans), max PER_DAY posts per UTC day (day markers "d:YYYY-MM-DD" kept in x_bigtx_posted.json)
+export const PER_DAY = 2;
 export function xPick(items, posted, now, min = MIN) {
-  const done = new Set(posted || []);
-  return items.filter((x) => x.usd >= min && now - x.t <= 2 * 3600e3 && !done.has(x.id)).sort((a, b) => b.usd - a.usd)[0] || null;
+  const done = new Set(posted || []), day = "d:" + new Date(now).toISOString().slice(0, 10);
+  if ((posted || []).filter((p) => p === day).length >= PER_DAY) return null;
+  const rt = new Set(); for (const x of items) for (const y of items) if (x !== y && x.tx === y.tx && x.from === y.to && x.to === y.from) rt.add(x.id);
+  return items.filter((x) => x.usd >= min && now - x.t <= 2 * 3600e3 && !done.has(x.id) && !x.internal && !rt.has(x.id)).sort((a, b) => b.usd - a.usd)[0] || null;
 }
 const fmtUsd = (n) => "$" + (n >= 1e9 ? (n / 1e9).toFixed(2) + "B" : (n / 1e6).toFixed(n >= 1e8 ? 0 : 1) + "M");
 const SIDE = { exchange_in: ["an unknown wallet", "an exchange wallet"], exchange_out: ["an exchange wallet", "an unknown wallet"], exchange_move: ["an exchange wallet", "another exchange wallet"], treasury: ["the issuer treasury", "a wallet"], wallet: ["an unknown wallet", "an unknown wallet"] };
@@ -41,5 +45,5 @@ if (process.argv[1].endsWith("x_bigtx.mjs")) {
   if (!res || res.message) { console.log("bigtx createPost failed:", JSON.stringify(r).slice(0, 300)); fs.writeFileSync(STATE, JSON.stringify(state, null, 1)); process.exit(1); }
   console.log("buffer id", res.post.id, res.post.status);
   if (MODE === "live") recordPost(state, Date.now());
-  posted.push(x.id); fs.writeFileSync(POSTED, JSON.stringify(posted.slice(-200))); fs.writeFileSync(STATE, JSON.stringify(state, null, 1));
+  posted.push(x.id); if (MODE === "live") posted.push("d:" + new Date().toISOString().slice(0, 10)); fs.writeFileSync(POSTED, JSON.stringify(posted.slice(-200))); fs.writeFileSync(STATE, JSON.stringify(state, null, 1));
 }
