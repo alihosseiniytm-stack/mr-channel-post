@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MarketRadar - وضعیت و آدرس‌های پشتیبان</title>
+<style>
+:root{--bg:#0b0f14;--card:#121923;--txt:#e8eef6;--mut:#8fa1b5;--ok:#2ecc71;--bad:#ff5c5c;--acc:#4da3ff}
+@media (prefers-color-scheme:light){:root{--bg:#f4f7fb;--card:#fff;--txt:#14202e;--mut:#5b6b7c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.7 system-ui,Tahoma,Arial,sans-serif;padding:16px}
+main{max-width:760px;margin:0 auto}h1{font-size:22px;margin:8px 0 4px}p.s{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border-radius:14px;padding:14px 16px;margin:12px 0;box-shadow:0 1px 8px rgba(0,0,0,.18)}
+.card h2{font-size:16px;margin:0 0 8px}a{color:var(--acc);word-break:break-all}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:6px 0;border-top:1px solid rgba(127,127,127,.18)}
+.row:first-of-type{border-top:0}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--mut);margin-inline-end:8px}
+.ok .dot{background:var(--ok)}.bad .dot{background:var(--bad)}.ms{color:var(--mut);font-size:13px;direction:ltr}
+small{color:var(--mut)}
+</style>
+</head>
+<body>
+<main>
+<h1>MarketRadar — وضعیت و آدرس‌های پشتیبان</h1>
+<p class="s">اگر آدرس اصلی باز نشد، یکی از آدرس‌های زیر را امتحان کنید. همه یک برنامه‌اند و کیف پول و ترید با همان کلیدهای خودتان کار می‌کند.<br><small>If the main address does not open, use one of the backup addresses below. Same app, same wallet.</small></p>
+
+<div class="card"><h2>آدرس‌ها / Addresses</h2>
+<div class="row"><span>آدرس اصلی · Main</span><a href="https://marketradarwhale.com/trade">marketradarwhale.com/trade</a></div>
+<div class="row"><span>پشتیبان ۱ · Backup 1</span><a href="https://alihosseiniytm-stack.github.io/trade/">alihosseiniytm-stack.github.io/trade</a></div>
+<div class="row"><span>پشتیبان ۲ · Backup 2</span><a href="https://alihosseiniytm-stack.github.io/mr-channel-post/trade/">…/mr-channel-post/trade</a></div>
+<div class="row"><span>پشتیبان ۳ (گوگل) · Backup 3 (Google)</span><a href="https://mr-mirror-61fd2.web.app/trade/">mr-mirror-61fd2.web.app/trade</a></div>
+<div class="row"><span>پشتیبان ۴ (گوگل) · Backup 4 (Google)</span><a href="https://mr-radar-mirror.web.app/trade/">mr-radar-mirror.web.app/trade</a></div>
+<div class="row"><span>پشتیبان ۵ (گوگل) · Backup 5 (Google)</span><a href="https://mr-whale-mirror.web.app/trade/">mr-whale-mirror.web.app/trade</a></div>
+<div class="row"><span>پشتیبان ۷ (گوگل ۲) · Backup 7 (Google 2)</span><a href="https://mr-two-main.web.app/trade/">mr-two-main.web.app/trade</a></div>
+<div class="row"><span>پشتیبان ۸ (گوگل ۲) · Backup 8 (Google 2)</span><a href="https://mr-two-radar.web.app/trade/">mr-two-radar.web.app/trade</a></div>
+<div class="row"><span>پشتیبان ۹ (گوگل ۲) · Backup 9 (Google 2)</span><a href="https://mr-two-whale.web.app/trade/">mr-two-whale.web.app/trade</a></div>
+<div class="row"><span>پشتیبان ۶ · Backup 6</span><a href="https://whale-alert-bot.alihosseini-ytm.workers.dev/trade">whale-alert-bot…workers.dev/trade</a></div>
+<div class="row"><span>ربات تلگرام · Telegram bot</span><a href="https://t.me/marketradarwhale_bot">@marketradarwhale_bot</a></div>
+</div>
+
+<div class="card"><h2>وضعیت زنده / Live status <small id="at"></small></h2><div id="list"></div></div>
+
+<div class="card"><h2>نکته</h2><p style="margin:0">کیف پول شما فقط روی دستگاه خودتان است. حتی اگر همهٔ سرورها قطع شوند، کلیدها از بین نمی‌روند؛ فقط برای مدتی دادهٔ زنده نمی‌بینید.<br><small>Your wallet lives only on your device. Even if every server is down your keys are safe.</small></p></div>
+</main>
+<script>
+(function(){
+  var checks=[
+    ["سایت اصلی · Main site","https://marketradarwhale.com/trade"],
+    ["API","https://marketradarwhale.com/whale-feed"],
+    ["پشتیبان API · API backup","https://whale-alert-bot.alihosseini-ytm.workers.dev/whale-feed"],
+    ["داده · Data (Cloudflare static)","https://mr-static.alihosseini-ytm.workers.dev/snap/whale-feed.json"],
+    ["داده · Data (GitHub Pages)","https://alihosseiniytm-stack.github.io/mr-channel-post/snap/whale-feed.json"],
+    ["آینه ۱ · Mirror 1","https://alihosseiniytm-stack.github.io/trade/"],
+    ["آینه ۲ · Mirror 2","https://alihosseiniytm-stack.github.io/mr-channel-post/trade/"],
+    ["آینه ۳ (گوگل) · Mirror 3 (Google)","https://mr-mirror-61fd2.web.app/trade/"],
+    ["آینه ۴ (گوگل) · Mirror 4 (Google)","https://mr-radar-mirror.web.app/trade/"],
+    ["آینه ۵ (گوگل) · Mirror 5 (Google)","https://mr-whale-mirror.web.app/trade/"],
+    ["آینه ۶ (گوگل ۲) · Mirror 6 (Google 2)","https://mr-two-main.web.app/trade/"],
+    ["آینه ۷ (گوگل ۲) · Mirror 7 (Google 2)","https://mr-two-radar.web.app/trade/"],
+    ["آینه ۸ (گوگل ۲) · Mirror 8 (Google 2)","https://mr-two-whale.web.app/trade/"]
+  ];
+  var box=document.getElementById("list");
+  checks.forEach(function(c){
+    var row=document.createElement("div");row.className="row";row.innerHTML='<span><i class="dot"></i>'+c[0]+'</span><span class="ms">…</span>';box.appendChild(row);
+    var t0=Date.now(),done=false;
+    var ctl=new AbortController();setTimeout(function(){ctl.abort()},12000);
+    fetch(c[1],{cache:"no-store",mode:"no-cors",signal:ctl.signal}).then(function(){done=true;row.className="row ok";row.lastChild.textContent=(Date.now()-t0)+" ms"}).catch(function(){row.className="row bad";row.lastChild.textContent="✗"});
+  });
+  document.getElementById("at").textContent=new Date().toLocaleTimeString();
+})();
+</script>
+</body>
+</html>
