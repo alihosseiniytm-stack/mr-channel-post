@@ -27,7 +27,7 @@ async function post(chain, pools, trades) {
   }
   return last;
 }
-let failed = 0;
+let failed = 0, posted = 0;
 for (const chain of CHAINS) {
   try {
     const all = [];
@@ -57,7 +57,10 @@ for (const chain of CHAINS) {
     for (let i = 0; i < meta.length; i += 5) { const r = await post(chain, meta.slice(i, i + 5), []); if (!r.ok) bad++; }
     for (let i = 0; i < trades.length; i += 400) { const r = await post(chain, [], trades.slice(i, i + 400)); if (!r.ok) bad++; else n += Math.min(400, trades.length - i); }
     console.log(chain, "pools", pools.length, "trades", trades.length, "posted", n, bad ? "ERRORS " + bad : "ok");
+    posted += n;
     if (bad) failed++;
   } catch (e) { failed++; console.log(chain, "ERROR", e.message); }
 }
-process.exit(failed === CHAINS.length ? 1 : 0);
+// T10-67 (2026-11-11): a run that posts 0 trades in total is red too (alarm: GitHub run failure), not a silent green.
+console.log("TOTAL_POSTED", posted);
+process.exit(failed === CHAINS.length || posted === 0 ? 1 : 0);
