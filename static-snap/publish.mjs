@@ -33,23 +33,26 @@ let PAGES_PF = {}, STATIC_PF = {}; const PF = {}; const staleCopy = [];
 // so with Pages alone the 5-min and hourly tiers looked "due" on almost every 1-min run: whale-stats was polled ~12k/day instead of ~2.4k, the 5-min set ~900/day each instead of 288.
 for (const h of [STATIC_HOST, READ_HOST]) { try { const sr = await fetch(h + "/snap/_state.json?t=" + Date.now(), { signal: AbortSignal.timeout(10000) }); if (sr.ok) { const j = await sr.json(); if (j && j.pf && typeof j.pf === "object") { if (h === READ_HOST) PAGES_PF = j.pf; else STATIC_PF = j.pf; } for (const k of Object.keys(j || {})) if (Number(j[k]) > (Number(STATE[k]) || 0)) STATE[k] = Number(j[k]); } } catch (e) {} }
 const NOW0 = Date.now();
-const TIER_MS = { hourly: 3600e3, spot: 1800e3, ten: 600e3, five: 300e3 };
+// T10-60 (2026-11-11, owner D106: Worker requests only for money): live layer every 3 min (was every 1-min run), "five" tier every 10 min (was 5),
+// per-whale stats every 4 h (was hourly), bundles of 6 (was 3). Bot requests from this job ~11.9k/day -> ~3k (E). All stay inside tools/freshness_config.json.
+const TIER_MS = { hourly: 3600e3, spot: 1800e3, ten: 600e3, five: 600e3, live: 180e3, stats: 4 * 3600e3 };
 const LIVE = ["whale-feed", "whale-live-positions", "whale-clusters", "pump-trending", "pump-graduating", "heat-coins", "aster-movers", "toman-rate", "snipe-signals", "top-movers?window=1h"];
 function tierOf(p) {
   if (p.indexOf("app-i18n") === 0 || p.indexOf("whale-top") === 0 || p === "pump-smart-all") return "hourly";
   if (p.indexOf("whale-leaderboard") === 0 && p.indexOf("window=month") < 0) return "hourly";
   if (p.indexOf("spot-whales") === 0) return "spot";
   if (p === "sol-smart-agree") return "ten"; // its Worker memo is 10 min anyway
-  if (LIVE.indexOf(p) >= 0) return null; // live layer: every run
+  if (LIVE.indexOf(p) >= 0) return "live"; // live layer: every 3 min (T10-60), copies in between come from mr-static (updated every run)
   return "five"; // everything computed from big D1 tables
 }
 const tierDue = {}; for (const t of Object.keys(TIER_MS)) tierDue[t] = !AUTO || !STATE[t] || NOW0 - STATE[t] >= TIER_MS[t] * 0.9;
 // T30-20: tier due OR the Pages copy is too old (its pf stamp) -> fetch fresh. Before this, the mr-static tier clock + Pages copies let a Pages copy be re-copied for hours.
 const DUE_MEMO = {};
 // fix-deploy-2: where a not-due copy comes from (hourly tier: the host with the newer pf, see copy_age.pickCopySource)
-const copySrc = (p) => pickCopySource({ tier: tierOf(p), pagesPf: PAGES_PF[snapName(p)], staticPf: STATIC_PF[snapName(p)] });
+const copySrc = (p) => tierOf(p) === "live" ? { src: "static", pf: STATIC_PF[snapName(p)] } : pickCopySource({ tier: tierOf(p), pagesPf: PAGES_PF[snapName(p)], staticPf: STATIC_PF[snapName(p)] });
 function dueNow(p) {
   if (p in DUE_MEMO) return DUE_MEMO[p];
+  if (tierOf(p) === "live") return (DUE_MEMO[p] = !AUTO || tierDue.live); // T10-60: mr-static copy is at most ~3 min old, no Pages-slot forcing
   const t = tierOf(p), d = needFresh({ auto: AUTO, tier: t, tierDue: t ? tierDue[t] : true, copyFetchedAt: copySrc(p).pf, now: NOW0, pagesSlot: isPagesSlot(MIN) });
   if (AUTO && t && !tierDue[t] && d) staleCopy.push(p);
   return (DUE_MEMO[p] = d);
@@ -67,7 +70,7 @@ const VARIANTS_RUN = HLB ? VARIANTS.filter((p) => p.indexOf("whale-leaderboard")
 // (vizier 2026-10-27: grow only after CPU p99 < 7 ms for 1 h). Heavy ones (cg, app-i18n, consensus, sol clusters, leaderboard, whale-stats...) stay single calls.
 const BUNDLE_LIGHT = new Set(["whale-feed", "whale-live-positions", "whale-clusters", "pump-trending", "pump-graduating", "heat-coins", "aster-movers", "toman-rate", "snipe-signals",
   "top-movers", "whale-sentiment", "whale-netflow", "signal-track-record", "sol-smart-agree", "big-transfers", "spot-whales"]);
-const BUNDLE_ON = process.env.BUNDLE !== "0", BUNDLE_CHUNK = Number(process.env.BUNDLE_CHUNK || 3), BSTAT = { items: 0, ok: 0, reqs: 0, fail: 0 };
+const BUNDLE_ON = process.env.BUNDLE !== "0", BUNDLE_CHUNK = Number(process.env.BUNDLE_CHUNK || 6), BSTAT = { items: 0, ok: 0, reqs: 0, fail: 0 };
 async function bundleFetch(list, chunk) {
   const out = {};
   if (!BUNDLE_ON || !list.length) return out;
@@ -113,7 +116,7 @@ await Promise.all(FIXED_RUN.concat(VARIANTS_RUN).map(async (p) => {
 
 // EXTRA_JSON / STATS_DUE: per-whale stats for the top leaderboard wallets. Slow-changing: fresh from the API hourly (first 5 minutes of the hour) or on manual runs; on every other run the previous copy is taken from the static host (free) so the files are never dropped from a deploy.
 {
-  const STATS_DUE = !AUTO || tierDue.hourly;
+  const STATS_DUE = !AUTO || tierDue.stats; // T10-60: every 4 h (closed-trade stats change slowly; ~2.4k -> ~600 bot requests/day)
   try {
     const lb = JSON.parse(fs.readFileSync(path.join(OUT, snapName("whale-leaderboard?window=month&limit=500") + ".json"), "utf8"));
     // top 40 of the month board + every wallet the page shows elsewhere (consensus, cards, top 7/30 days, other boards), capped at 100 so opening one of them never reaches the Worker
