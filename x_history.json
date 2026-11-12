@@ -1,12 +1,5 @@
 [
  {
-  "key": "0x3bcae23e8c380dab4732e9a159c0456f12d866f3:ETH:SHORT",
-  "text": "🦈 900 ETH ($1.9M) SHORT opened at 25x\nEntry $2,138 · Whale · 60% win rate\n📊 Track record: +$248K this month · 60% win rate (112 trades)\nhttps://marketradarwhale.com/en/whale/0x3bcae23e8c380dab4732e9a159c0456f12d866f3/\n#ETH #crypto",
-  "at": "2026-11-09T05:41:28.939Z",
-  "file": "x-img/202611090541-0-ETH.png",
-  "mode": "live"
- },
- {
   "key": "0xb37f083bad343a76361cd8f39afe7ecd6a0a66ca:BTC:SHORT",
   "text": "🐋🐋 360 BTC ($26.6M) SHORT opened at 40x\nEntry $73,765 · Whale · 100% win rate\n📊 Track record: +$592K this month · 100% win rate (20 trades)\nhttps://marketradarwhale.com/en/whale/0xb37f083bad343a76361cd8f39afe7ecd6a0a66ca/\n#BTC #crypto",
   "at": "2026-11-09T08:12:29.751Z",
@@ -95,6 +88,13 @@
   "text": "🦈 15.0 BTC ($1.1M) SHORT opened at 3x\nEntry $73,785 · Whale · 91% win rate\n📊 Track record: No. 13 on the Radar Top 100 this month, +$16.6M profit · 91% win rate (468 trades)\nhttps://marketradarwhale.com/en/whale/0xdd53c5297309130ab5fe5623dc905752e3342b13/\n#BTC #crypto",
   "at": "2026-11-12T04:12:49.814Z",
   "file": "x-img/202611120412-0-BTC.png",
+  "mode": "live"
+ },
+ {
+  "key": "0xd4c1f7e8d876c4749228d515473d36f919583d1d:BTC:LONG",
+  "text": "🦈 17.9 BTC ($1.3M) LONG opened at 12x\nEntry $72,488 · Whale · 100% win rate\n📊 Track record: No. 27 on the Radar Top 100 this month, +$6.6M profit · 100% win rate (889 trades)\nhttps://marketradarwhale.com/en/whale/0xd4c1f7e8d876c4749228d515473d36f919583d1d/\n#BTC #crypto",
+  "at": "2026-11-12T14:11:45.083Z",
+  "file": "x-img/202611121411-0-BTC.png",
   "mode": "live"
  }
 ]
