@@ -17,4 +17,12 @@ if (Array.isArray(list) && all.length > 150) {
   fs.writeFileSync("data/platforms.json", JSON.stringify(out));
   console.log("platforms for", Object.keys(out).length, "coins");
 } else console.log("platform list: no data, keeping the old file");
+// T21-05 (2026-11-04): GeckoTerminal trending pools for the Mini App pump tab. GeckoTerminal rate-limits the shared Cloudflare
+// Worker addresses; the bot /gt proxy (src/floor3/gt_proxy.js) serves this copy (labeled with its age) when the live call is refused.
+for (const net of ["solana", "eth", "bsc", "robinhood"]) {
+  const g = await J("https://api.geckoterminal.com/api/v2/networks/" + net + "/trending_pools?page=1&include=base_token");
+  if (g && Array.isArray(g.data) && g.data.length) fs.writeFileSync("data/gt_trending_" + net + ".json", JSON.stringify({ mrw_snap_at: new Date().toISOString(), data: g.data, included: g.included || [] }));
+  else console.log("gt " + net + ": no data, keeping the old file");
+  await sleep(2500);
+}
 fs.writeFileSync("data/updated.txt", new Date().toISOString() + "\n");

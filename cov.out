@@ -1,0 +1,42 @@
+  1 BTC      direct: - wrapped: sol,eth,bsc
+  2 ETH     SWAP direct: - wrapped: -
+  3 USDT    SWAP direct: - wrapped: -
+  4 BNB     SWAP direct: - wrapped: -
+  5 XRP      direct: - wrapped: -
+  6 USDC     direct: sol,eth wrapped: -
+  7 SOL     SWAP direct: - wrapped: -
+  8 TRX     SWAP direct: - wrapped: -
+  9 ZEC      direct: - wrapped: sol,bsc
+ 10 FIGR_HELOC  direct: - wrapped: -
+ 11 HYPE     direct: - wrapped: -
+ 12 DOGE     direct: - wrapped: bsc
+ 13 LINK     direct: sol,eth,bsc wrapped: -
+ 14 XMR      direct: - wrapped: -
+ 15 WBT      direct: eth wrapped: -
+ 16 USDS     direct: sol,eth wrapped: -
+ 17 ADA      direct: - wrapped: bsc
+ 18 RAIN     direct: - wrapped: -
+ 19 LEO      direct: eth wrapped: -
+ 20 XLM      direct: - wrapped: -
+ 21 NEAR     direct: - wrapped: sol,bsc,eth
+ 22 BCH      direct: - wrapped: -
+ 23 UNI      direct: eth,bsc wrapped: -
+ 24 LTC      direct: - wrapped: bsc
+ 25 AVAX     direct: - wrapped: sol
+ 26 CC       direct: - wrapped: -
+ 27 USDE     direct: sol,eth,bsc wrapped: -
+ 28 SUI      direct: - wrapped: -
+ 29 HBAR     direct: - wrapped: -
+ 30 DAI      direct: eth wrapped: -
+ 31 USD1     direct: sol,eth,bsc wrapped: -
+ 32 QNT      direct: eth wrapped: -
+ 33 GRAM     direct: eth,bsc wrapped: -
+ 34 BTW      direct: eth,bsc wrapped: -
+ 35 TAO      direct: - wrapped: -
+ 36 CRO      direct: eth wrapped: -
+ 37 SHIB     direct: eth wrapped: -
+ 38 XAUT    SWAP direct: - wrapped: -
+ 39 USDG     direct: sol,eth wrapped: -
+ 40 PYUSD    direct: sol,eth wrapped: -
+
+buyable: 29 of 40

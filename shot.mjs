@@ -1,0 +1,10 @@
+import { chromium } from "playwright-core";
+const lang = process.argv[2] || "en";
+const b = await chromium.launch({ executablePath: "C:/Users/aliho/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe" });
+const ctx = await b.newContext({ viewport: { width: 420, height: 900 }, deviceScaleFactor: 2 });
+await ctx.addInitScript((l) => { try { localStorage.setItem("radar_lang", l); } catch (e) {} }, lang);
+const p = await ctx.newPage();
+await p.goto("https://marketradarwhale.com/trade?tab=whales&scope=futures", { waitUntil: "networkidle", timeout: 60000 }).catch(() => {});
+await p.waitForTimeout(6000);
+await p.screenshot({ path: "shot_" + lang + ".png" });
+await b.close();

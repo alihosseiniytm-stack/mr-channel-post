@@ -1,0 +1,64 @@
+markets 200
+platform list 21764
+coins without a direct route yet: 58 -> searching verified wrapped tokens
+  5 XRP      NONE
+  9 FIGR_HELOC NONE
+ 10 ZEC      wrapped-bsc
+ 11 HYPE     NONE
+ 12 DOGE     wrapped-bsc
+ 14 XMR      NONE
+ 17 ADA      wrapped-bsc
+ 18 RAIN     NONE
+ 20 XLM      NONE
+ 21 NEAR     wrapped-sol,wrapped-bsc,wrapped-eth
+ 22 BCH      NONE
+ 24 LTC      wrapped-bsc
+ 26 AVAX     wrapped-sol
+ 27 CC       NONE
+ 28 SUI      NONE
+ 30 HBAR     NONE
+ 35 TAO      NONE
+ 52 DOT      wrapped-bsc
+ 65 ETC      NONE
+ 69 VVV      NONE
+ 70 BFUSD    NONE
+ 73 KAS      NONE
+ 75 ALGO     NONE
+ 76 JST      NONE
+ 78 KCS      NONE
+ 79 PI       NONE
+ 85 FIL      NONE
+ 87 AERO     NONE
+ 88 DASH     NONE
+ 90 VET      NONE
+ 94 STX      NONE
+ 97 XDC      NONE
+100 APT      NONE
+101 FLR      NONE
+114 YLDS     NONE
+118 SEI      NONE
+122 XPL      NONE
+123 TIA      NONE
+125 PRL      NONE
+129 BSV      NONE
+131 HASH     NONE
+132 MON      NONE
+138 XTZ      NONE
+141 SUN      NONE
+148 DCR      NONE
+154 OP       NONE
+156 AR       NONE
+158 LUNC     NONE
+159 CFX      NONE
+162 APEPE    NONE
+165 RUNE     NONE
+166 IOTA     NONE
+174 KAIA     NONE
+180 THETA    NONE
+186 PC0000031 NONE
+190 AKT      NONE
+193 MINA     NONE
+199 NEO      wrapped-bsc
+
+TOTAL 200 | buyable: 150 | not buyable: 50
+NOT BUYABLE: 5:XRP 9:FIGR_HELOC 11:HYPE 14:XMR 18:RAIN 20:XLM 22:BCH 27:CC 28:SUI 30:HBAR 35:TAO 65:ETC 69:VVV 70:BFUSD 73:KAS 75:ALGO 76:JST 78:KCS 79:PI 85:FIL 87:AERO 88:DASH 90:VET 94:STX 97:XDC 100:APT 101:FLR 114:YLDS 118:SEI 122:XPL 123:TIA 125:PRL 129:BSV 131:HASH 132:MON 138:XTZ 141:SUN 148:DCR 154:OP 156:AR 158:LUNC 159:CFX 162:APEPE 165:RUNE 166:IOTA 174:KAIA 180:THETA 186:PC0000031 190:AKT 193:MINA

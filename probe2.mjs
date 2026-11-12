@@ -1,0 +1,14 @@
+import { chromium } from "playwright-core";
+const b = await chromium.launch({ executablePath: "C:/Users/aliho/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe" });
+const ctx = await b.newContext({ viewport: { width: 420, height: 1000 } });
+await ctx.addInitScript(() => { try { localStorage.setItem("radar_lang", "en"); } catch (e) {} });
+const p = await ctx.newPage();
+await p.goto("https://marketradarwhale.com/trade?tab=whales&scope=futures", { waitUntil: "networkidle", timeout: 60000 }).catch(() => {});
+await p.waitForTimeout(5000);
+const info = () => p.evaluate(() => ({ active: [...document.querySelectorAll(".wtab")].map(e => e.className + ":" + (e.getAttribute("onclick") || e.dataset.w || e.dataset.sub || Object.keys(e.dataset).join(","))).join(" | "), vis: [...document.querySelectorAll("[id^=wpane],[id^=whale],[id*=Pane],[id*=pane]")].filter(e => e.offsetParent).map(e => e.id).slice(0, 8) }));
+console.log(JSON.stringify(await info()));
+await p.locator(".wtab").nth(1).click({ force: true });
+await p.waitForTimeout(4000);
+console.log(JSON.stringify(await info()));
+console.log((await p.locator("body").innerText()).slice(0, 400).replace(/\n+/g, " | "));
+await b.close();
