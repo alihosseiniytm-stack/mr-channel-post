@@ -29,7 +29,8 @@ const SIDE = { exchange_in: ["an unknown wallet", "an exchange wallet"], exchang
 export function xText(x, base = "https://marketradarwhale.com") {
   const em = x.usd >= 1e8 ? "🚨🚨🚨" : x.usd >= 5e7 ? "🚨🚨" : "🚨";
   const amt = Math.round(x.amount).toLocaleString("en-US") + " #" + x.coin + " (" + fmtUsd(x.usd) + ")", net = netOf(x);
-  const line = x.kind === "mint" ? `${amt} newly minted on ${net}` : x.kind === "burn" ? `${amt} burned on ${net}` : `${amt} moved from ${(SIDE[x.kind] || SIDE.wallet)[0]} to ${(SIDE[x.kind] || SIDE.wallet)[1]} on ${net}`;
+  // dex_swap (T30-31 worker 3): money into / out of a DEX pool = a big swap; "a DEX pool", never the venue name (R53)
+  const line = x.kind === "mint" ? `${amt} newly minted on ${net}` : x.kind === "burn" ? `${amt} burned on ${net}` : x.kind === "dex_swap" ? (x.toType === "dex" ? `${amt} moved from ${x.fromType === "exchange" ? "an exchange wallet" : "an unknown wallet"} into a DEX pool on ${net}` : `${amt} moved from a DEX pool to ${x.toType === "exchange" ? "an exchange wallet" : "an unknown wallet"} on ${net}`) : `${amt} moved from ${(SIDE[x.kind] || SIDE.wallet)[0]} to ${(SIDE[x.kind] || SIDE.wallet)[1]} on ${net}`;
   return `${em} ${line}\n\nTx: ${x.url}\nLive big transfers: ${base}/en/big-transactions/`;
 }
 
