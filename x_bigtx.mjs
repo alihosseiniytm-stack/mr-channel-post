@@ -13,17 +13,22 @@ const load = (f, d) => (fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, "utf8")
 
 // vizier 18 2026-11-07 (owner: 2 big-tx posts a day): skip internal moves + same-tx round trips (DeFi flash loans), max PER_DAY posts per UTC day (day markers "d:YYYY-MM-DD" kept in x_bigtx_posted.json)
 export const PER_DAY = 2;
+// T30-31 (2026-11-12): network name = the feed item field "net" (all chains), fallback to the old map; unknown network = item never posted (never "Tron").
+export const NET = { eth: "Ethereum", tron: "Tron", bsc: "BNB Chain", arb: "Arbitrum", base: "Base", btc: "Bitcoin", xrp: "XRP Ledger", ton: "TON", sol: "Solana" };
+export const netOf = (x) => (x && typeof x.net === "string" && x.net.trim()) || NET[x && x.chain] || null;
+// also never post an unconfirmed (src_n < 2) or failed item (the feed filters this already; second guard here)
+const ok2 = (x) => x.conf !== "fail" && (x.src_n == null || x.src_n >= 2);
 export function xPick(items, posted, now, min = MIN) {
   const done = new Set(posted || []), day = "d:" + new Date(now).toISOString().slice(0, 10);
   if ((posted || []).filter((p) => p === day).length >= PER_DAY) return null;
   const rt = new Set(); for (const x of items) for (const y of items) if (x !== y && x.tx === y.tx && x.from === y.to && x.to === y.from) rt.add(x.id);
-  return items.filter((x) => x.usd >= min && now - x.t <= 2 * 3600e3 && !done.has(x.id) && !x.internal && !rt.has(x.id)).sort((a, b) => b.usd - a.usd)[0] || null;
+  return items.filter((x) => x.usd >= min && now - x.t <= 2 * 3600e3 && !done.has(x.id) && !x.internal && !rt.has(x.id) && !!netOf(x) && ok2(x)).sort((a, b) => b.usd - a.usd)[0] || null;
 }
 const fmtUsd = (n) => "$" + (n >= 1e9 ? (n / 1e9).toFixed(2) + "B" : (n / 1e6).toFixed(n >= 1e8 ? 0 : 1) + "M");
 const SIDE = { exchange_in: ["an unknown wallet", "an exchange wallet"], exchange_out: ["an exchange wallet", "an unknown wallet"], exchange_move: ["an exchange wallet", "another exchange wallet"], treasury: ["the issuer treasury", "a wallet"], wallet: ["an unknown wallet", "an unknown wallet"] };
 export function xText(x, base = "https://marketradarwhale.com") {
   const em = x.usd >= 1e8 ? "🚨🚨🚨" : x.usd >= 5e7 ? "🚨🚨" : "🚨";
-  const amt = Math.round(x.amount).toLocaleString("en-US") + " #" + x.coin + " (" + fmtUsd(x.usd) + ")", net = x.chain === "eth" ? "Ethereum" : "Tron";
+  const amt = Math.round(x.amount).toLocaleString("en-US") + " #" + x.coin + " (" + fmtUsd(x.usd) + ")", net = netOf(x);
   const line = x.kind === "mint" ? `${amt} newly minted on ${net}` : x.kind === "burn" ? `${amt} burned on ${net}` : `${amt} moved from ${(SIDE[x.kind] || SIDE.wallet)[0]} to ${(SIDE[x.kind] || SIDE.wallet)[1]} on ${net}`;
   return `${em} ${line}\n\nTx: ${x.url}\nLive big transfers: ${base}/en/big-transactions/`;
 }
