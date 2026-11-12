@@ -62,7 +62,7 @@ test("pre-check (usd = Infinity) is open outside windows only while the breaking
 test("dedupe: same whale event / same big transfer id never twice", () => {
   const m = { address: "0xabc0000000000000000000000000000000000001", coin: "BTC", side: "LONG", sizeCoin: 70, notional: 5.5e6, lev: 10, entry: 81000, label: "Whale · 60% win rate", rank: 5, pnl30: 1.5e6 };
   const p = makeText(m); assert.ok(isDup(p.text, p.key, [{ key: p.key, text: p.text }]));
-  const now = at("2026-11-12T14:00:00Z"), it = { id: "eth:0x1:1", usd: 30e6, t: now - 10 * M, tx: "0x1", from: "a", to: "b" };
+  const now = at("2026-11-12T14:00:00Z"), it = { id: "eth:0x1:1", chain: "eth", usd: 30e6, t: now - 10 * M, tx: "0x1", from: "a", to: "b" };
   assert.equal(xPick([it], [], now, 20e6).id, "eth:0x1:1");
   assert.equal(xPick([it], ["eth:0x1:1"], now, 20e6), null, "posted id is skipped");
 });
