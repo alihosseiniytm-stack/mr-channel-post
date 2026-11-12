@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: dry | draft | live | extra-pinned | extra-weekly | drafts-list | drafts-delete
+        description: dry | draft | live | extra-pinned | extra-weekly | drafts-list | drafts-sent (read-only sent list + gaps) | drafts-delete
         default: dry
       n:
         description: posts in this run
