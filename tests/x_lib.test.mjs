@@ -1,5 +1,7 @@
 import test from "node:test"; import assert from "node:assert/strict";
-import { rampCap, canPost, countReq, recordPost, emptyState, isDup, makeText, CFG } from "../x_lib.mjs";
+import { rampCap, canPost as cp, countReq, recordPost, emptyState, isDup, makeText, CFG } from "../x_lib.mjs";
+// T50-09 (11-12): timing now = windows + 90 min (tests/test_x_timing.mjs); these legacy tests run with an all-day window + the old 2 h spacing
+const L = { WINDOWS: [[0, 24]], BREAKING_MIN: 5e6, BREAKING_EXTRA: 1, SPACING_MIN: 120 }, canPost = (s, t) => cp(s, t, 0, L);
 const T0 = Date.parse("2026-10-30T10:00:00Z"), H = 3600e3, D = 24 * H;
 test("ramp caps", () => { assert.deepEqual([1, 3, 4, 7, 8, 20].map(rampCap), [3, 3, 5, 5, 8, 8]); });
 test("daily cap + spacing", () => {

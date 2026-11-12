@@ -1,5 +1,7 @@
 name: x-post
 # X posts via Buffer (free plan API), EVENT-TRIGGERED: a whale opened/added >= $1M in the last 2 h -> shareNow (ramp cap/day, spacing >= 2 h, Buffer request counter stop at 80/day).
+# T50-09 TIMING (2026-11-12): normal posts only in peak windows UTC (repo var X_PEAK_WINDOWS, default 02-05,07-10,13-17,19-22), BREAKING >= X_BREAKING_MIN
+# ($5M) any hour, at most X_BREAKING_EXTRA (1) per day over the cap, >= X_SPACING_MIN (90) min between ANY 2 posts; 0-posts alarm after X_ZERO_POST_H (24) h.
 # SWITCH IS ON since 2026-10-30 (owner yes 11:45Z, vizier 6). To stop: comment the cron OR set repo variable X_POST_LIVE=false.
 on:
   schedule:
@@ -21,8 +23,12 @@ on:
       ids:
         description: drafts-delete only, space separated Buffer post ids
         default: ""
+      zero_test:
+        description: "1 = force the 0-posts alarm once (test)"
+        default: "0"
 permissions:
   contents: write
+  issues: write
 concurrency: x-post
 jobs:
   post:
@@ -41,6 +47,9 @@ jobs:
           node x_drafts.mjs "$M" ${{ github.event.inputs.ids }}
       - run: npm ci
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
+      - name: unit tests (timing + x_lib; red = no post)
+        if: "!startsWith(github.event.inputs.mode, 'drafts-')"
+        run: node --test tests/x_lib.test.mjs tests/test_x_timing.mjs
       - run: sudo apt-get update && sudo apt-get install -y fonts-noto-core fonts-noto-color-emoji
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
       - run: npx playwright-core install --with-deps chromium
@@ -51,6 +60,10 @@ jobs:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
           X_POST_LIVE: ${{ vars.X_POST_LIVE }}
+          X_PEAK_WINDOWS: ${{ vars.X_PEAK_WINDOWS }}
+          X_BREAKING_MIN: ${{ vars.X_BREAKING_MIN }}
+          X_BREAKING_EXTRA: ${{ vars.X_BREAKING_EXTRA }}
+          X_SPACING_MIN: ${{ vars.X_SPACING_MIN }}
         run: |
           git config user.name "x-post-bot"; git config user.email "bot@users.noreply.github.com"
           MODE="${{ github.event.inputs.mode || 'live' }}"
@@ -63,6 +76,10 @@ jobs:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
           X_POST_LIVE: ${{ vars.X_POST_LIVE }}
+          X_PEAK_WINDOWS: ${{ vars.X_PEAK_WINDOWS }}
+          X_BREAKING_MIN: ${{ vars.X_BREAKING_MIN }}
+          X_BREAKING_EXTRA: ${{ vars.X_BREAKING_EXTRA }}
+          X_SPACING_MIN: ${{ vars.X_SPACING_MIN }}
         run: node x_bigtx.mjs --mode "${{ github.event.inputs.mode || 'live' }}" --min "${{ vars.X_BIGTX_MIN || '20000000' }}"
       - name: save state
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
@@ -70,3 +87,12 @@ jobs:
           git add x_history.json x_state.json x_bigtx_posted.json x-img 2>/dev/null || true
           git commit -m "x state $(date -u +%FT%TZ)" || exit 0
           for i in 1 2 3; do git pull --rebase -q && git push && exit 0; echo "push try $i rejected, retry"; sleep $((i*7)); done; exit 1  # T10-63: other workflows push main too (race)
+      - name: 0-posts alarm (T50-09 plan B; plan A = whale-alert-worker deadman)
+        if: "always() && !startsWith(github.event.inputs.mode, 'drafts-')"
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          X_POST_LIVE: ${{ vars.X_POST_LIVE }}
+          X_ZERO_POST_H: ${{ vars.X_ZERO_POST_H }}
+          X_ZERO_TEST: ${{ github.event.inputs.zero_test }}
+        run: node x_zero_alarm.mjs

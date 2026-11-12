@@ -1,10 +1,11 @@
 // X posts via Buffer GraphQL API (free plan). EVENT-TRIGGERED: a whale OPENED/ADDED >= threshold within the last 2 h -> post now (Buffer mode shareNow).
 // usage: node x_post.mjs [--n 1] [--mode dry|draft|live] [--min 1000000] [--save]     env: BUFFER_API_KEY, BUFFER_CHANNEL_ID, X_POST_LIVE
-// dry = texts+images only, nothing sent. draft = Buffer drafts (not live; no caps). live = shareNow, ENFORCES ramp cap, 2 h spacing, request counter; refuses unless X_POST_LIVE=true.
+// dry = texts+images only, nothing sent (prints the timing decision). draft = Buffer drafts (not live; no caps). live = shareNow, ENFORCES T50-09 timing
+// (peak windows UTC, BREAKING >= $5M any hour +1/day, 90 min spacing; x_lib decide()), ramp cap, request counter; refuses unless X_POST_LIVE=true.
 // Old queue version kept as x_post.old-20261030.mjs.
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
-import { CFG, qualifies, wlabel, usd, short, makeText, isDup, canPost, countReq, recordPost, emptyState, dayIndex, rampCap } from "./x_lib.mjs";
+import { CFG, TIMING, qualifies, wlabel, usd, short, makeText, isDup, decide, inWindow, countReq, recordPost, emptyState, dayIndex, rampCap } from "./x_lib.mjs";
 import { renderCard, closeCards } from "./x_card.mjs";
 
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
@@ -51,12 +52,15 @@ async function gql(query, variables) {
 if (process.argv[1].endsWith("x_post.mjs")) {
   if (MODE === "live" && process.env.X_POST_LIVE !== "true") { console.log("X_POST_LIVE is not true: live mode refused (switch OFF)"); process.exit(0); }
   const now = Date.now();
-  console.log(`mode=${MODE} day=${dayIndex(state, now)} cap=${rampCap(dayIndex(state, now))} reqs today=${state.days[new Date(now).toISOString().slice(0, 10)]?.reqs || 0}`);
-  if (MODE === "live") { const c = canPost(state, now); if (!c.ok) { console.log("SKIP:", c.why); process.exit(0); } }
+  console.log(`mode=${MODE} day=${dayIndex(state, now)} cap=${rampCap(dayIndex(state, now))} reqs today=${state.days[new Date(now).toISOString().slice(0, 10)]?.reqs || 0} | timing: windows ${TIMING.WINDOWS.map((w) => w.join("-")).join(",")} UTC (now ${inWindow(now) ? "IN" : "OUT"}), BREAKING >= ${usd(TIMING.BREAKING_MIN)} +${TIMING.BREAKING_EXTRA}/day, spacing ${TIMING.SPACING_MIN} min, last post ${state.last}`);
+  const pre = decide(state, now, Infinity); console.log("TIMING pre-check:", pre.ok ? "open (" + pre.why + ")" : "closed (" + pre.why + ")");
+  if (MODE === "live" && !pre.ok) { console.log("SKIP:", pre.why); process.exit(0); }
   const evs = await findEvents(now), picks = [];
   for (const m of evs) {
     const post = makeText(m);
     if (isDup(post.text, post.key, hist)) { console.log("SKIP duplicate:", post.key); continue; }
+    const dc = decide(state, now, m.notional); console.log(`TIMING ${m.coin} ${m.side} ${usd(m.notional)}: ${dc.ok ? "POST " + dc.kind : "SKIP"} (${dc.why})`);
+    if (MODE === "live" && !dc.ok) continue;
     picks.push({ m, post }); if (picks.length >= N) break;
   }
   if (!picks.length) { console.log("no new event (>= " + usd(MIN) + " opened in the last 2 h)"); process.exit(0); }
@@ -77,7 +81,7 @@ if (process.argv[1].endsWith("x_post.mjs")) {
     const post = makeText(m, undefined, isT);
     console.log("POST", i, `(fill ${((now - m.fillT) / 60000).toFixed(0)} min old)\n` + post.text + "\nimage: " + files[i]);
     if (MODE !== "dry") {
-      if (MODE === "live") { const c = canPost(state, Date.now()); if (!c.ok) { console.log("SKIP:", c.why); break; } }
+      let kind = "normal"; if (MODE === "live") { const c = decide(state, Date.now(), m.notional); if (!c.ok) { console.log("SKIP:", c.why); break; } kind = c.kind; }
       for (let k = 0; k < 12; k++) { if ((await fetch(RAW + files[i], { method: "HEAD" })).ok) break; await new Promise((r) => setTimeout(r, 5000)); }
       const q = `mutation($i:CreatePostInput!){createPost(input:$i){... on PostActionSuccess{post{id status}} ... on MutationError{message}}}`;
       const input = { text: post.text, channelId: cid, schedulingType: "automatic", mode: MODE === "live" ? "shareNow" : "addToQueue", assets: [{ image: { url: RAW + files[i] } }] };
@@ -86,7 +90,7 @@ if (process.argv[1].endsWith("x_post.mjs")) {
       const res = await gql(q, { i: input });
       if (res.createPost.message) throw new Error("createPost: " + res.createPost.message);
       console.log("buffer id", res.createPost.post.id, res.createPost.post.status);
-      if (MODE === "live") recordPost(state, Date.now());
+      if (MODE === "live") { recordPost(state, Date.now(), kind); console.log("recorded", kind); }
     }
     hist.push({ key: post.key, text: post.text, at: new Date().toISOString(), file: files[i], mode: MODE });
   }

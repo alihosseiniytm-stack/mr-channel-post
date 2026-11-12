@@ -1,10 +1,11 @@
 // X posts for BIG TRANSFERS (T30-25 + T50-09, 2026-11-06). Source = OUR reader on mr-hub (public copy, 15 min late):
 // https://wh.marketradarwhale.com/btf/free.json. Rule + text = mirror of whale-alert-worker/vps/mr-hub/bigtx/bigtx_core.mjs
 // xPick/xText (tested in tests/30_whales/test_bigtx.mjs): >= $20M, <= 2 h old, never posted before, biggest first; text names
-// no exchange (R53). Shares x_state.json with x_post.mjs, so the SAME ramp cap/day, 2 h spacing and Buffer request stop apply.
+// no exchange (R53). Shares x_state.json with x_post.mjs, so the SAME ramp cap/day, T50-09 timing (peak windows, BREAKING >= $5M +1/day,
+// 90 min spacing; x_lib decide()) and Buffer request stop apply.
 // usage: node x_bigtx.mjs [--mode dry|draft|live] [--min 20000000]    live refuses unless X_POST_LIVE=true
 import fs from "node:fs";
-import { canPost, countReq, recordPost, emptyState } from "./x_lib.mjs";
+import { decide, countReq, recordPost, emptyState } from "./x_lib.mjs";
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const MODE = arg("mode", "dry"), MIN = Number(arg("min", 20e6)), SRC = "https://wh.marketradarwhale.com/btf/free.json";
 const STATE = "x_state.json", POSTED = "x_bigtx_posted.json";
@@ -33,9 +34,9 @@ if (process.argv[1].endsWith("x_bigtx.mjs")) {
   let j; try { j = await fetch(SRC, { signal: AbortSignal.timeout(20000) }).then((r) => r.json()); } catch (e) { console.log("bigtx: source down", e.message); process.exit(0); }
   const x = xPick(j.items || [], posted, now);
   if (!x) { console.log(`bigtx: no new transfer >= ${fmtUsd(MIN)} in the last 2 h (free list ${j.items?.length || 0} items)`); process.exit(0); }
-  const text = xText(x); console.log("BIGTX POST\n" + text);
+  const text = xText(x), dc = decide(state, now, x.usd); console.log("BIGTX POST\n" + text + `\nTIMING bigtx $${Math.round(x.usd)}: ${dc.ok ? "POST " + dc.kind : "SKIP"} (${dc.why})`);
   if (MODE === "dry") process.exit(0);
-  if (MODE === "live") { const c = canPost(state, now); if (!c.ok) { console.log("bigtx SKIP:", c.why); process.exit(0); } }
+  if (MODE === "live" && !dc.ok) { console.log("bigtx SKIP:", dc.why); process.exit(0); }
   const q = `mutation($i:CreatePostInput!){createPost(input:$i){... on PostActionSuccess{post{id status}} ... on MutationError{message}}}`;
   const input = { text, channelId: process.env.BUFFER_CHANNEL_ID, schedulingType: "automatic", mode: MODE === "live" ? "shareNow" : "addToQueue" };
   if (MODE === "draft") input.saveToDraft = true;
@@ -44,6 +45,6 @@ if (process.argv[1].endsWith("x_bigtx.mjs")) {
   const res = r?.data?.createPost;
   if (!res || res.message) { console.log("bigtx createPost failed:", JSON.stringify(r).slice(0, 300)); fs.writeFileSync(STATE, JSON.stringify(state, null, 1)); process.exit(1); }
   console.log("buffer id", res.post.id, res.post.status);
-  if (MODE === "live") recordPost(state, Date.now());
+  if (MODE === "live") recordPost(state, Date.now(), dc.kind);
   posted.push(x.id); if (MODE === "live") posted.push("d:" + new Date().toISOString().slice(0, 10)); fs.writeFileSync(POSTED, JSON.stringify(posted.slice(-200))); fs.writeFileSync(STATE, JSON.stringify(state, null, 1));
 }
