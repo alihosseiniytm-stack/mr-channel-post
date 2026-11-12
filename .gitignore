@@ -1,3 +1,4 @@
 node_modules
 out*.png
 data.json
+_scratch/
