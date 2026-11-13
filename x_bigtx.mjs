@@ -31,7 +31,7 @@ export function xText(x, base = "https://marketradarwhale.com") {
   const amt = Math.round(x.amount).toLocaleString("en-US") + " #" + x.coin + " (" + fmtUsd(x.usd) + ")", net = netOf(x);
   // dex_swap (T30-31 worker 3): money into / out of a DEX pool = a big swap; "a DEX pool", never the venue name (R53)
   const line = x.kind === "mint" ? `${amt} newly minted on ${net}` : x.kind === "burn" ? `${amt} burned on ${net}` : x.kind === "dex_swap" ? (x.toType === "dex" ? `${amt} moved from ${x.fromType === "exchange" ? "an exchange wallet" : "an unknown wallet"} into a DEX pool on ${net}` : `${amt} moved from a DEX pool to ${x.toType === "exchange" ? "an exchange wallet" : "an unknown wallet"} on ${net}`) : `${amt} moved from ${(SIDE[x.kind] || SIDE.wallet)[0]} to ${(SIDE[x.kind] || SIDE.wallet)[1]} on ${net}`;
-  return `${em} ${line}\n\nTx: ${x.url}\nLive big transfers: ${base}/en/big-transactions/`;
+  return `${em} ${line}\n\nTx: ${x.url}\nLive big transfers: ${base}/go/x/bigtx/en/big-transactions/`;
 }
 
 if (process.argv[1].endsWith("x_bigtx.mjs")) {

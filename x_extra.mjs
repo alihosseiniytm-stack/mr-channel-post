@@ -13,7 +13,7 @@ export const INTRO_TEXT = `🐋 MarketRadar Whale
 We watch the biggest Hyperliquid whales live and post their new positions: size, entry price, leverage and each whale's real track record (win rate, 30-day profit).
 
 Free to follow. Full trade history of every whale on our site 👇
-${BASE}
+${BASE}/go/x/intro/
 #crypto #Hyperliquid`;
 export const introHtml = () => `<!doctype html><html><head><meta charset="utf-8"><style>${CSS}
 .row{display:flex;gap:22px;margin-top:40px}.c{flex:1;background:#0d151b;border:1px solid #1c2e38;border-radius:16px;padding:26px 28px}.c i{font-style:normal;font-size:46px}.c b{display:block;font-size:30px;margin:10px 0 6px}.c span{font-size:22px;color:#7fa39a}</style></head><body>

@@ -23,7 +23,7 @@ export const wlabel = (st) => `Whale · ${Math.round(st.winRate * 100)}% win rat
 
 // m = {address, coin, side:"LONG"|"SHORT", sizeCoin, notional, lev, entry, label, rank, pnl30, roi}
 export function makeText(m, base = "https://marketradarwhale.com", thread = false) {
-  const url = `${base}/en/whale/${m.address}/`;
+  const url = `${base}/go/x/whale/en/whale/${m.address}/`; // T41-21: /go/<src>/<kind>/ = counted click (site Worker), then 302 to the page
   const act = `${m.side} opened${m.lev ? ` at ${m.lev}x` : ""}`;
   const wr = m.win != null ? ` · ${Math.round(m.win * 100)}% win rate (${m.trades} trades)` : "";
   const rec = m.rank ? `📊 Track record: No. ${m.rank} on the Radar Top 100 this month, ${sg(m.pnl30)} profit${wr}`
