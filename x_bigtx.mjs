@@ -5,7 +5,7 @@
 // 90 min spacing; x_lib decide()) and Buffer request stop apply.
 // usage: node x_bigtx.mjs [--mode dry|draft|live] [--min 20000000]    live refuses unless X_POST_LIVE=true
 import fs from "node:fs";
-import { decide, countReq, recordPost, emptyState } from "./x_lib.mjs";
+import { decide, countReq, recordPost, emptyState, foreignLinks } from "./x_lib.mjs";
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
 const MODE = arg("mode", "dry"), MIN = Number(arg("min", 20e6)), SRC = "https://wh.marketradarwhale.com/btf/free.json";
 const STATE = "x_state.json", POSTED = "x_bigtx_posted.json";
@@ -31,16 +31,33 @@ export function xText(x, base = "https://marketradarwhale.com") {
   const amt = Math.round(x.amount).toLocaleString("en-US") + " #" + x.coin + " (" + fmtUsd(x.usd) + ")", net = netOf(x);
   // dex_swap (T30-31 worker 3): money into / out of a DEX pool = a big swap; "a DEX pool", never the venue name (R53)
   const line = x.kind === "mint" ? `${amt} newly minted on ${net}` : x.kind === "burn" ? `${amt} burned on ${net}` : x.kind === "dex_swap" ? (x.toType === "dex" ? `${amt} moved from ${x.fromType === "exchange" ? "an exchange wallet" : "an unknown wallet"} into a DEX pool on ${net}` : `${amt} moved from a DEX pool to ${x.toType === "exchange" ? "an exchange wallet" : "an unknown wallet"} on ${net}`) : `${amt} moved from ${(SIDE[x.kind] || SIDE.wallet)[0]} to ${(SIDE[x.kind] || SIDE.wallet)[1]} on ${net}`;
-  return `${em} ${line}\n\nTx: ${x.url}\nLive big transfers: ${base}/go/x/bigtx/en/big-transactions/`;
+  // T50-21 (owner D334 2026-11-24): ONLY our own link (no explorer "Tx:" link); hash + explorer live on our big-transactions page.
+  const why = whyLine(x);
+  return `${em} ${line}${why ? "\n" + why : ""}\n\nFull list + details: ${bigtxLink(x, base)}`;
 }
-
+// T50-21: the ONE place that builds the post link (a later per-tx page on our site only changes this function).
+// The live page has no coin/chain/tx filter param yet (checked assets/bigtx.d92d88ac17.js 2026-11-24: no URLSearchParams) -> plain page.
+export const bigtxLink = (x, base = "https://marketradarwhale.com") => `${base}/go/x/bigtx/en/big-transactions/`;
+// T50-21 vizier idea 2: one short "why it matters" line from the data we have (hedged, no exchange name, R53)
+export const STABLE = new Set(["USDT", "USDC", "DAI", "FDUSD", "USDE", "PYUSD", "TUSD", "USD1", "RLUSD", "USDS"]);
+export function whyLine(x) {
+  const st = STABLE.has(String(x.coin || "").toUpperCase());
+  if (x.kind === "exchange_in") return st ? "Stablecoins moving onto an exchange can mean buying power is getting ready." : "Coins sent to an exchange are often sold: possible sell pressure.";
+  if (x.kind === "exchange_out") return st ? "Stablecoins leaving an exchange: less ready buying power there." : "Coins leaving an exchange are often held: possible accumulation.";
+  if (x.kind === "mint" && st) return "New stablecoin supply often comes before buying.";
+  return "";
+}
 if (process.argv[1].endsWith("x_bigtx.mjs")) {
   if (MODE === "live" && process.env.X_POST_LIVE !== "true") { console.log("bigtx: X_POST_LIVE is not true: live refused"); process.exit(0); }
   const now = Date.now(), state = load(STATE, emptyState()), posted = load(POSTED, []);
   let j; try { j = await fetch(SRC, { signal: AbortSignal.timeout(20000) }).then((r) => r.json()); } catch (e) { console.log("bigtx: source down", e.message); process.exit(0); }
   const x = xPick(j.items || [], posted, now);
+  const dayN = posted.filter((p) => p === "d:" + new Date(now).toISOString().slice(0, 10)).length; // T50-21: say the real reason (cap vs no data)
+  if (!x && dayN >= PER_DAY) { console.log(`bigtx: daily cap ${dayN}/${PER_DAY} reached (owner 11-07: 2 big-tx posts/day); free list ${j.items?.length || 0} items`); process.exit(0); }
   if (!x) { console.log(`bigtx: no new transfer >= ${fmtUsd(MIN)} in the last 2 h (free list ${j.items?.length || 0} items)`); process.exit(0); }
-  const text = xText(x), dc = decide(state, now, x.usd); console.log("BIGTX POST\n" + text + `\nTIMING bigtx $${Math.round(x.usd)}: ${dc.ok ? "POST " + dc.kind : "SKIP"} (${dc.why})`);
+  const text = xText(x), dc = decide(state, now, x.usd);
+  if (foreignLinks(text).length) { console.log("bigtx REFUSED: outside link in text (D334)", foreignLinks(text)); process.exit(1); }
+  console.log("BIGTX POST\n" + text + `\nTIMING bigtx $${Math.round(x.usd)}: ${dc.ok ? "POST " + dc.kind : "SKIP"} (${dc.why})`);
   if (MODE === "dry") process.exit(0);
   if (MODE === "live" && !dc.ok) { console.log("bigtx SKIP:", dc.why); process.exit(0); }
   const q = `mutation($i:CreatePostInput!){createPost(input:$i){... on PostActionSuccess{post{id status}} ... on MutationError{message}}}`;

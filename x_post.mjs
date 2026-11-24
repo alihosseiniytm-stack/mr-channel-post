@@ -5,7 +5,7 @@
 // Old queue version kept as x_post.old-20261030.mjs.
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
-import { CFG, TIMING, qualifies, wlabel, usd, short, makeText, isDup, decide, inWindow, countReq, recordPost, emptyState, dayIndex, rampCap } from "./x_lib.mjs";
+import { CFG, TIMING, qualifies, wlabel, usd, short, makeText, isDup, decide, inWindow, countReq, recordPost, emptyState, dayIndex, rampCap, foreignLinks } from "./x_lib.mjs";
 import { renderCard, closeCards } from "./x_card.mjs";
 
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
@@ -18,13 +18,33 @@ const save = () => { if (MODE !== "dry" || process.argv.includes("--save")) { fs
 
 const hl = (body) => fetch("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then((r) => r.json());
 
+// T50-21: open positions >= min of the given wallets, straight from HL (5 at a time; a failed wallet is skipped, never guessed)
+export async function scanTop(wallets, min, max = 100) {
+  const out = [], list = (wallets || []).map((w) => w.address).filter((a) => typeof a === "string" && /^0x[0-9a-fA-F]{40}$/.test(a)).slice(0, max);
+  for (let i = 0; i < list.length; i += 5) {
+    const rs = await Promise.all(list.slice(i, i + 5).map((a) => hl({ type: "clearinghouseState", user: a }).then((s) => [a, s]).catch(() => [a, null])));
+    for (const [a, s] of rs) for (const ap of s?.assetPositions || []) {
+      const p = ap.position || {}, v = Number(p.positionValue);
+      if (p.coin && !p.coin.includes(":") && isFinite(v) && v >= min) out.push({ address: a, coin: p.coin, value: v, leverage: p.leverage?.value ?? null });
+    }
+  }
+  return out;
+}
+
 export async function findEvents(now = Date.now()) {
   const [feed, lb] = await Promise.all([fetch(BASE + "/whale-feed").then((r) => r.json()), fetch(BASE + "/whale-leaderboard?limit=100").then((r) => r.json())]);
   const rank = new Map(lb.sort((a, b) => b.pnl - a.pnl).map((w, i) => [w.address.toLowerCase(), { rank: i + 1, ...w }]));
-  const cands = feed.filter((p) => !p.coin.includes(":") && p.value >= MIN).sort((a, b) => b.value - a.value).slice(0, 40);
+  // T50-21 (2026-11-24): /whale-feed went STALE (header x-feed-newest-age-s 45,808 s = 12.7 h, 28 items, 4 >= $1M from 1 wallet) ->
+  // since 11-15 most peak-window runs said "no new event" (whale posts 3-5/day -> 0-2/day). Second source, read straight from Hyperliquid:
+  // open positions >= MIN of OUR leaderboard top 100 (clearinghouseState, weight 2 each = ~200 of HL's 1200/min); same fresh-fill + quality gates below.
+  const live = await scanTop(lb, MIN);
+  const seen = new Set(), cands = [...feed.filter((p) => !p.coin.includes(":") && p.value >= MIN), ...live].filter((p) => { const k = p.address.toLowerCase() + ":" + p.coin; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => b.value - a.value).slice(0, 40);
+  console.log(`sources: whale-feed ${feed.length} items (>= ${usd(MIN)}: ${feed.filter((p) => !p.coin.includes(":") && p.value >= MIN).length}), HL top-100 scan ${live.length} positions >= ${usd(MIN)}, candidates ${cands.length}`);
   const fills = new Map(), out = [], mids = await hl({ type: "allMids" });
   for (const p of cands) {
-    if (!fills.has(p.address)) fills.set(p.address, await hl({ type: "userFills", user: p.address }).catch(() => []));
+    // T50-21: userFillsByTime (only the 2 h window = small reply, low HL weight) instead of the full userFills; a non-array reply
+    // (rate limit / error) = unknown -> skip this wallet (never treated as "no fills"), one retry after 2 s
+    if (!fills.has(p.address)) { let r = null; for (let k = 0; k < 2 && !Array.isArray(r); k++) { if (k) await new Promise((s) => setTimeout(s, 2000)); r = await hl({ type: "userFillsByTime", user: p.address, startTime: now - CFG.FRESH_MS }).catch(() => null); } fills.set(p.address, Array.isArray(r) ? r : []); if (!Array.isArray(r)) console.log("SKIP fills unknown:", short(p.address)); }
     const f = fills.get(p.address).filter((x) => x.coin === p.coin && /^Open (Long|Short)$/.test(x.dir) && x.time >= now - CFG.FRESH_MS);
     if (!f.length) continue;
     const dir = f[0].dir.endsWith("Long") ? "LONG" : "SHORT", same = f.filter((x) => x.dir === f[0].dir);
@@ -79,6 +99,7 @@ if (process.argv[1].endsWith("x_post.mjs")) {
   for (const [i, { m }] of picks.entries()) {
     const isT = THREAD && i === picks.length - 1; // --thread: only the LAST post of the run is a thread (main without link + reply with link), the others keep the link in the post
     const post = makeText(m, undefined, isT);
+    if (foreignLinks(post.text + "\n" + (post.reply || "")).length) { console.log("REFUSED: outside link in text (D334)", foreignLinks(post.text)); process.exit(1); }
     console.log("POST", i, `(fill ${((now - m.fillT) / 60000).toFixed(0)} min old)\n` + post.text + "\nimage: " + files[i]);
     if (MODE !== "dry") {
       let kind = "normal"; if (MODE === "live") { const c = decide(state, Date.now(), m.notional); if (!c.ok) { console.log("SKIP:", c.why); break; } kind = c.kind; }

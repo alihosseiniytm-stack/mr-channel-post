@@ -70,3 +70,8 @@ export const canPost = (state, now, usdv = 0, T = TIMING) => decide(state, now, 
 export function zeroPosts(state, now, hours = TIMING.ZERO_POST_H) { const t = state && state.last ? Date.parse(state.last) : NaN; return { alarm: !(now - t <= hours * 3600e3), hoursSince: isFinite(t) ? Math.round((now - t) / 360e3) / 10 : null }; }
 export function countReq(state, now, n = 1) { const k = dayKey(now); (state.days[k] ||= { posts: 0, reqs: 0 }).reqs += n; }
 export function recordPost(state, now, kind = "normal") { const k = dayKey(now); const d = (state.days[k] ||= { posts: 0, reqs: 0 }); d.posts += 1; if (kind === "breaking") d.breaking = (d.breaking || 0) + 1; state.last = new Date(now).toISOString(); if (!state.start) state.start = k; }
+
+// T50-21 (owner D334 2026-11-24): every link in an X post must be OUR site (competitors post only their own link). Used as a hard
+// refuse in x_post.mjs + x_bigtx.mjs before Buffer and in tests/test_x_links.mjs (R43/R44).
+export const OWN_HOST = /^https:\/\/(www\.)?marketradarwhale\.com(\/|$)/;
+export const foreignLinks = (text) => (String(text).match(/https?:\/\/\S+/g) || []).filter((u) => !OWN_HOST.test(u));

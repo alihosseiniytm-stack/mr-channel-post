@@ -47,9 +47,9 @@ jobs:
           node x_drafts.mjs "$M" ${{ github.event.inputs.ids }}
       - run: npm ci
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
-      - name: unit tests (timing + x_lib; red = no post)
+      - name: unit tests (timing + x_lib + own-link-only; red = no post)
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
-        run: node --test tests/x_lib.test.mjs tests/test_x_timing.mjs
+        run: node --test tests/x_lib.test.mjs tests/test_x_timing.mjs tests/test_x_links.mjs  # T50-21: own-link-only check
       - run: sudo apt-get update && sudo apt-get install -y fonts-noto-core fonts-noto-color-emoji
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
       - run: npx playwright-core install --with-deps chromium
