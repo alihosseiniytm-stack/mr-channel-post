@@ -1,0 +1,45 @@
+name: feed-watchdog
+# T30-40 (2026-11-25): OUTSIDE watchdog for the public whale feed (what users get), independent of mr-hub.
+# Every 30 min: /whale-feed header x-feed-newest-age-s (> 40 min = stale) + api.marketradarwhale.com/health.
+# ONE owner Telegram alarm per incident (dedupe = open Issue labelled feed-watchdog), ONE "fresh again", ONE daily health line ~06:0xZ.
+# Script + test: tools/feed_watchdog.mjs, tests/30_whales/test_feed_watchdog.mjs (test gate runs first; red = no check).
+on:
+  schedule:
+    - cron: "4,34 * * * *"
+  workflow_dispatch:
+    inputs:
+      force_stale_s:
+        description: "TEST: plant this x-feed-newest-age-s value (e.g. 45808); empty = real check"
+        default: ""
+      force_daily:
+        description: "1 = send the daily health line now"
+        default: "0"
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: feed-watchdog
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: unit test gate
+        run: node tests/30_whales/test_feed_watchdog.mjs
+      - name: label
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh label create feed-watchdog --color B60205 --description "public whale feed stale / api down" 2>/dev/null || true
+      - name: check feed + api
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MONITOR_BOT_TOKEN: ${{ secrets.MONITOR_BOT_TOKEN }}
+          MONITOR_CHAT_ID: ${{ secrets.MONITOR_CHAT_ID }}
+          FORCE_STALE_S: ${{ github.event.inputs.force_stale_s }}
+          FORCE_DAILY: ${{ github.event.inputs.force_daily }}
+        run: node tools/feed_watchdog.mjs

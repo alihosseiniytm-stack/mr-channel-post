@@ -6,6 +6,12 @@
 // Write budget (Turso free = 10M row-writes/month): ~14k wallet rows/day + position changes only.
 const TURSO_URL = (process.env.TURSO_URL || "").replace(/^libsql:/, "https:"), TURSO_TOKEN = process.env.TURSO_TOKEN || "";
 const MIN_ACCT = Number(process.env.MIN_ACCT || 100000), MAX_WALLETS = Number(process.env.MAX_WALLETS || 8000), RPS = Number(process.env.RPS || 8);
+// T30-40 (2026-11-25): `seen` is bumped ONLY for feed-size positions (HL positionValue >= HOT_FEED_MIN_USD, default $100k = the bot
+// /whale-feed cut), same rule as mr-hub mr_hl_hot.mjs (T30-39). WHY [measured]: this 6-hourly full scan changed ~3,504 rows per run, mostly
+// small/market-maker rows, all with seen = now -> they filled the bot's 150-newest-rows window for ~10 min each run. Small rows still get
+// szi/entry updated and keep their OLD seen (new small rows = 0). Only reader of `seen` = the bot feed query.
+const FEED_MIN = Number(process.env.HOT_FEED_MIN_USD || 100000);
+const HL_INFO = process.env.HL_INFO_URL || "https://api.hyperliquid.xyz/info", HL_LB = process.env.HL_LB_URL || "https://stats-data.hyperliquid.xyz/Mainnet/leaderboard";
 const T0 = Date.now(), sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // 2026-10-21: Turso free reads were exhausted for the month (BLOCKED until Nov 1) -> warehouse moves to Neon (Postgres over HTTP). NEON_URL set = Neon; otherwise Turso as before. Same call shape, SQL is translated here.
 const WH_URL = (process.env.WH_URL || "").replace(/\/+$/, ""), WH_TOKEN = process.env.WH_TOKEN || ""; // 2026-10-21: own Postgres on the owner's Lightsail server (no monthly read caps); preferred over Neon/Turso
@@ -45,7 +51,7 @@ const val = (c) => (c && c.type !== "null" ? c.value : null);
 async function hl(body) {
   for (let a = 0; a < 5; a++) {
     try {
-      const r = await fetch("https://api.hyperliquid.xyz/info", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) });
+      const r = await fetch(HL_INFO, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(20000) });
       if (r.status === 429) { await sleep(4000 * (a + 1)); continue; }
       if (!r.ok) throw new Error("hl " + r.status);
       return await r.json();
@@ -64,7 +70,7 @@ await turso([
 // 1) leaderboard
 let rows = null;
 for (let a = 0; a < 3 && !rows; a++) {
-  try { const lbRes = await fetch("https://stats-data.hyperliquid.xyz/Mainnet/leaderboard", { signal: AbortSignal.timeout(240000) }); if (!lbRes.ok) throw new Error("http " + lbRes.status); rows = (await lbRes.json()).leaderboardRows || []; }
+  try { const lbRes = await fetch(HL_LB, { signal: AbortSignal.timeout(240000) }); if (!lbRes.ok) throw new Error("http " + lbRes.status); rows = (await lbRes.json()).leaderboardRows || []; }
   catch (e) { console.log("leaderboard attempt " + (a + 1) + " failed: " + String(e.message || e).slice(0, 80)); await sleep(5000); }
 }
 if (!rows || rows.length < 1000) { console.log("leaderboard unavailable"); process.exit(1); }
@@ -86,8 +92,8 @@ if (Date.now() - lastW > 20 * 3600e3) {
 // 3) existing positions -> diff -> write only changes
 const ex = new Map();
 const exW = new Map();
-{ const res = (await turso([["SELECT wallet, coin, szi, entry, lev, liq FROM hl_positions"]]))[0].response.result.rows; for (const r of res) { ex.set(val(r[0]) + "|" + val(r[1]), { szi: Number(val(r[2])), entry: Number(val(r[3])) }); (exW.get(val(r[0])) || exW.set(val(r[0]), []).get(val(r[0]))).push(val(r[1])); } }
-const stmts = []; let scanned = 0, failed = 0, posNow = 0, changed = 0, removed = 0;
+{ const res = (await turso([["SELECT wallet, coin, szi, entry, seen FROM hl_positions"]]))[0].response.result.rows; for (const r of res) { ex.set(val(r[0]) + "|" + val(r[1]), { szi: Number(val(r[2])), entry: Number(val(r[3])), seen: Number(val(r[4])) || 0 }); (exW.get(val(r[0])) || exW.set(val(r[0]), []).get(val(r[0]))).push(val(r[1])); } }
+const stmts = []; let scanned = 0, failed = 0, posNow = 0, changed = 0, feedChanged = 0, removed = 0;
 const flush = async () => { while (stmts.length) await turso(stmts.splice(0, 150)); };
 const queue = targets.slice(); const gap = 1000 / RPS; let nextAt = Date.now();
 async function worker() {
@@ -102,7 +108,11 @@ async function worker() {
       const p = ap.position; if (!p || !p.coin) continue; const szi = Number(p.szi); if (!szi) continue;
       seenCoins.add(p.coin); posNow++;
       const key = t.w + "|" + p.coin, old = ex.get(key), entry = Number(p.entryPx || 0);
-      if (!old || old.szi !== szi || Math.abs(old.entry - entry) > 1e-12) { changed++; stmts.push(["INSERT INTO hl_positions (wallet, coin, szi, entry, lev, liq, cross, seen) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(wallet, coin) DO UPDATE SET szi=excluded.szi, entry=excluded.entry, lev=excluded.lev, liq=excluded.liq, cross=excluded.cross, seen=excluded.seen", [t.w, p.coin, szi, entry, Number((p.leverage && p.leverage.value) || 0), p.liquidationPx == null ? null : Number(p.liquidationPx), p.leverage && p.leverage.type === "cross" ? 1 : 0, Date.now()]]); }
+      if (!old || old.szi !== szi || Math.abs(old.entry - entry) > 1e-12) {
+        changed++; const feedSize = Math.abs(Number(p.positionValue || 0)) >= FEED_MIN; if (feedSize) feedChanged++;
+        const seenAt = feedSize ? Date.now() : (old ? old.seen : 0); // T30-40: dust/MM churn must not push whales out of the feed window
+        stmts.push(["INSERT INTO hl_positions (wallet, coin, szi, entry, lev, liq, cross, seen) VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(wallet, coin) DO UPDATE SET szi=excluded.szi, entry=excluded.entry, lev=excluded.lev, liq=excluded.liq, cross=excluded.cross, seen=excluded.seen", [t.w, p.coin, szi, entry, Number((p.leverage && p.leverage.value) || 0), p.liquidationPx == null ? null : Number(p.liquidationPx), p.leverage && p.leverage.type === "cross" ? 1 : 0, seenAt]]);
+      }
     }
     for (const c of exW.get(t.w) || []) if (!seenCoins.has(c)) { removed++; stmts.push(["DELETE FROM hl_positions WHERE wallet = ? AND coin = ?", [t.w, c]]); }
     if (stmts.length >= 300) await flush();
@@ -111,7 +121,7 @@ async function worker() {
 }
 await Promise.all(Array.from({ length: 6 }, worker));
 await flush();
-const summary = { at: Date.now(), leaderboard: all.length, tracked: targets.length, scanned, failed, positions: posNow, changed, removed, walletWrites, seconds: Math.round((Date.now() - T0) / 1000) };
+const summary = { at: Date.now(), leaderboard: all.length, tracked: targets.length, scanned, failed, positions: posNow, changed, feed_changed: feedChanged, removed, walletWrites, seconds: Math.round((Date.now() - T0) / 1000) };
 await turso([["INSERT INTO hl_meta (k, v) VALUES ('last_run', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v", [JSON.stringify(summary)]]]);
 console.log(JSON.stringify(summary));
 if (scanned < targets.length * 0.7) { console.log("too many failed lookups"); process.exit(1); }

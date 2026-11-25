@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: seen-rule test gate (T30-40; red = no collect)
+        run: node tests/30_whales/test_hl_whales_seen.mjs
       - name: collect
         env:
           WH_URL: ${{ secrets.WH_URL }}
