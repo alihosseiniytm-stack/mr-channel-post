@@ -2,7 +2,7 @@
 import test from "node:test"; import assert from "node:assert/strict";
 import fs from "node:fs";
 import { makeText, foreignLinks } from "../x_lib.mjs";
-import { xText, whyLine, bigtxLink } from "../x_bigtx.mjs";
+import { xText, whyLine, bigtxLink, xLen } from "../x_bigtx.mjs";
 
 const KINDS = ["exchange_in", "exchange_out", "exchange_move", "treasury", "wallet", "mint", "burn", "dex_swap"];
 const tx = (k, coin = "USDT") => ({ id: "t" + k, tx: "0xabc", kind: k, coin, amount: 25e6, usd: 25e6, chain: "eth", net: "Ethereum", fromType: "wallet", toType: k === "dex_swap" ? "dex" : "exchange", url: "https://etherscan.io/tx/0xabc", t: Date.now() });
@@ -21,8 +21,8 @@ test("big transfer texts: no explorer / outside link, exactly one own link, <= 2
     assert.deepEqual(foreignLinks(t), [], k + " " + c + ": " + t);
     assert.ok(!/Tx:|etherscan|tronscan|bscscan|solscan|explorer/i.test(t), k + ": " + t);
     assert.equal((t.match(/https?:\/\/\S+/g) || []).length, 1, k + " one link");
-    assert.ok(t.includes(bigtxLink(tx(k))), k + " our big-transactions link");
-    assert.ok(t.length <= 280, k + " length " + t.length);
+    assert.ok(t.includes(bigtxLink(tx(k, c))), k + " our chart link (T40-24: chart of that coin + ?src)");
+    assert.ok(xLen(t) <= 280, k + " X length " + xLen(t)); // T40-24: X counts a URL as 23
   }
 });
 

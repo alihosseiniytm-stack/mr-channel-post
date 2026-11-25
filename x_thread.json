@@ -1,0 +1,13 @@
+{
+ "id": "chart-launch-1",
+ "enabled": true,
+ "note": "T40-24 chart-launch thread (owner D347). Posted ONCE by x_bigtx.mjs job 'launch' (marker in x_bigtx_follow.json). Human-readable copy: docs/x_chart_launch_thread.md. Every link = our site with ?src=x_thread.",
+ "posts": [
+  "We built a free crypto chart that shows what the whales do.\n\nBig BTC and ETH transfers onto and off exchanges, whale entries and liquidation levels, right on the candles. Unlimited drawings, no sign-up. 🧵",
+  "Most whale alerts are a line of text: \"N BTC moved\". You never see what price did next.\n\nOn our chart every big transfer sits on the candle it happened, so you can see the move AND the reaction.",
+  "Coins sent to an exchange are often sold. Coins leaving an exchange are usually held.\n\nWe add up every big transfer per hour, so the net flow of the day is one glance.",
+  "Whale positions too: entry, size, leverage and the liquidation level of the biggest traders, drawn on the same chart.",
+  "Draw as much as you want: trend lines, channels, Fibonacci, long/short boxes. No 30-drawing cap. Saved on your device, free.",
+  "Try it free, no sign-up:\nhttps://marketradarwhale.com/go/x/thread/en/chart/?m=BTC&tf=1h&src=x_thread\n\nFollow us for the daily flow card and big transfer alerts. #Bitcoin #Ethereum #crypto"
+ ]
+}

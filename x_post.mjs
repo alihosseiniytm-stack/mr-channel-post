@@ -5,7 +5,7 @@
 // Old queue version kept as x_post.old-20261030.mjs.
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
-import { CFG, TIMING, qualifies, wlabel, usd, short, makeText, isDup, decide, inWindow, countReq, recordPost, emptyState, dayIndex, rampCap, foreignLinks } from "./x_lib.mjs";
+import { CFG, TIMING, qualifies, wlabel, usd, short, makeText, whyChart, isDup, decide, inWindow, countReq, recordPost, emptyState, dayIndex, rampCap, foreignLinks } from "./x_lib.mjs";
 import { renderCard, closeCards } from "./x_card.mjs";
 
 const arg = (k, d) => { const i = process.argv.indexOf("--" + k); return i > 0 ? process.argv[i + 1] : d; };
@@ -25,7 +25,7 @@ export async function scanTop(wallets, min, max = 100) {
     const rs = await Promise.all(list.slice(i, i + 5).map((a) => hl({ type: "clearinghouseState", user: a }).then((s) => [a, s]).catch(() => [a, null])));
     for (const [a, s] of rs) for (const ap of s?.assetPositions || []) {
       const p = ap.position || {}, v = Number(p.positionValue);
-      if (p.coin && !p.coin.includes(":") && isFinite(v) && v >= min) out.push({ address: a, coin: p.coin, value: v, leverage: p.leverage?.value ?? null });
+      if (p.coin && !p.coin.includes(":") && isFinite(v) && v >= min) out.push({ address: a, coin: p.coin, value: v, leverage: p.leverage?.value ?? null, liq: Number(p.liquidationPx) || null }); // liq: D351 card level
     }
   }
   return out;
@@ -56,7 +56,7 @@ export async function findEvents(now = Date.now()) {
     if (!r) { const pf = await hl({ type: "portfolio", user: p.address }).catch(() => null); const g = (k) => Number(pf?.find((x) => x[0] === k)?.[1].pnlHistory.at(-1)?.[1]); pnlMonth = g("month"); pnlAll = g("allTime"); if (!isFinite(pnlMonth)) pnlMonth = pnlAll = undefined; }
     if (!qualifies(st, r ? r.pnl : pnlMonth)) { console.log("SKIP whale quality:", short(p.address), st ? `${st.trades} trades ${Math.round(st.winRate * 100)}% win` : "no stats", "30d", r ? Math.round(r.pnl) : pnlMonth); continue; }
     out.push({ now: +mids[p.coin], win: st.winRate, trades: st.trades, pnlMonth, pnlAll, address: p.address, coin: p.coin, side: dir, sizeCoin, notional, lev: p.leverage, entry: notional / sizeCoin, fillT: Math.max(...same.map((x) => x.time)),
-      label: wlabel(st), rank: r?.rank, pnl30: r?.pnl, roi: r?.roi });
+      label: wlabel(st), rank: r?.rank, pnl30: r?.pnl, roi: r?.roi, liq: p.liq ?? null });
   }
   return out.sort((a, b) => b.fillT - a.fillT);
 }
@@ -98,7 +98,7 @@ if (process.argv[1].endsWith("x_post.mjs")) {
   const cid = MODE === "dry" ? null : process.env.BUFFER_CHANNEL_ID;
   for (const [i, { m }] of picks.entries()) {
     const isT = THREAD && i === picks.length - 1; // --thread: only the LAST post of the run is a thread (main without link + reply with link), the others keep the link in the post
-    const post = makeText(m, undefined, isT);
+    const post = makeText(m, undefined, isT, whyChart(state)); // D351: rotating "why our chart" line before the link
     if (foreignLinks(post.text + "\n" + (post.reply || "")).length) { console.log("REFUSED: outside link in text (D334)", foreignLinks(post.text)); process.exit(1); }
     console.log("POST", i, `(fill ${((now - m.fillT) / 60000).toFixed(0)} min old)\n` + post.text + "\nimage: " + files[i]);
     if (MODE !== "dry") {

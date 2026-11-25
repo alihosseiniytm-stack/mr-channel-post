@@ -49,7 +49,7 @@ jobs:
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
       - name: unit tests (timing + x_lib + own-link-only; red = no post)
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
-        run: node --test tests/x_lib.test.mjs tests/test_x_timing.mjs tests/test_x_links.mjs  # T50-21: own-link-only check
+        run: node --test tests/x_lib.test.mjs tests/test_x_timing.mjs tests/test_x_links.mjs tests/test_x_chart.mjs  # T50-21: own-link-only check; T40-24: chart image + ranking + ?src
       - run: sudo apt-get update && sudo apt-get install -y fonts-noto-core fonts-noto-color-emoji
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
       - run: npx playwright-core install --with-deps chromium
@@ -69,7 +69,7 @@ jobs:
           MODE="${{ github.event.inputs.mode || 'live' }}"
           case "$MODE" in extra-*) node x_extra.mjs draft "${MODE#extra-}"; exit 0;; esac
           node x_post.mjs $([ "${{ github.event.inputs.thread }}" = true ] && echo --thread) --n "${{ github.event.inputs.n || 1 }}" --mode "$MODE" --min "${{ github.event.inputs.min || 1000000 }}" $([ "$MODE" = dry ] || echo --save)
-      - name: big transfer post (T30-25)
+      - name: big transfer / 24 h after / daily flow / launch thread post (T30-25, T40-24 chart image)
         if: "!startsWith(github.event.inputs.mode, 'drafts-') && !startsWith(github.event.inputs.mode, 'extra-')"
         continue-on-error: true
         env:
@@ -84,7 +84,7 @@ jobs:
       - name: save state
         if: "!startsWith(github.event.inputs.mode, 'drafts-')"
         run: |
-          git add x_history.json x_state.json x_bigtx_posted.json x-img 2>/dev/null || true
+          git add x_history.json x_state.json x_bigtx_posted.json x_bigtx_follow.json x-img 2>/dev/null || true
           git commit -m "x state $(date -u +%FT%TZ)" || exit 0
           for i in 1 2 3; do git pull --rebase -q && git push && exit 0; echo "push try $i rejected, retry"; sleep $((i*7)); done; exit 1  # T10-63: other workflows push main too (race)
       - name: 0-posts alarm (T50-09 plan B; plan A = whale-alert-worker deadman)

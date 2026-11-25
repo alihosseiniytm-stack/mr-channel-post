@@ -22,8 +22,9 @@ export const qualifies = (st, pnl30) => !!st && st.trades >= CFG.MIN_TRADES && s
 export const wlabel = (st) => `Whale · ${Math.round(st.winRate * 100)}% win rate`;
 
 // m = {address, coin, side:"LONG"|"SHORT", sizeCoin, notional, lev, entry, label, rank, pnl30, roi}
-export function makeText(m, base = "https://marketradarwhale.com", thread = false) {
-  const url = `${base}/go/x/whale/en/whale/${m.address}/`; // T41-21: /go/<src>/<kind>/ = counted click (site Worker), then 302 to the page
+export function makeText(m, base = "https://marketradarwhale.com", thread = false, why = "") {
+  // T41-21: /go/<src>/<kind>/ = counted click (site Worker), then 302 to the page; T40-24 (D347): + ?src tag (the 302 keeps the query, checked 2026-11-25)
+  const url = `${base}/go/x/whale/en/whale/${m.address}/?src=x_whale`;
   const act = `${m.side} opened${m.lev ? ` at ${m.lev}x` : ""}`;
   const wr = m.win != null ? ` · ${Math.round(m.win * 100)}% win rate (${m.trades} trades)` : "";
   const rec = m.rank ? `📊 Track record: No. ${m.rank} on the Radar Top 100 this month, ${sg(m.pnl30)} profit${wr}`
@@ -31,9 +32,21 @@ export function makeText(m, base = "https://marketradarwhale.com", thread = fals
   const text = `${sizeEmoji(m.notional)} ${qty(m.sizeCoin)} ${m.coin} (${usd(m.notional)}) ${act}
 Entry $${px(m.entry)} · ${m.label}
 ${rec}
-${thread ? "" : url + "\n"}#${m.coin} #crypto`;
+#${m.coin} #crypto${why ? "\n" + why : ""}${thread ? "" : "\n" + url}`; // D351: ends with ONE "why our chart" line + the link
   return { text, url, reply: thread ? `Full trade history of this whale 👇\n${url}` : null, key: m.address + ":" + m.coin + ":" + m.side };
 }
+
+// T40-24 #x-chart (owner D351 2026-11-25): every X post ends with ONE short "why our chart" line, rotating, never the same twice in a row
+// (index kept in x_state.json .why, shared by whale + big transfer + after + flow posts). Max 1 line, no venue/competitor names (R53).
+export const WHY_CHART = [
+  "Our free chart puts every whale move on the candle it happened.",
+  "Charts show the price. Ours also shows who moved it.",
+  "Free chart, no drawing limit, big transfers marked on the candles.",
+  "Whale entries and liquidation levels on one free chart.",
+  "See the next whale move land on the chart, live and free.",
+  "Unlimited drawings + whale moves on the candles, free.",
+];
+export function whyChart(state) { const n = WHY_CHART.length, prev = Number.isInteger(state?.why) ? state.why : -1, i = (prev + 1 + n) % n; if (state) state.why = i; return WHY_CHART[i]; }
 
 export const dayKey = (t) => new Date(t).toISOString().slice(0, 10);
 export const emptyState = () => ({ start: null, days: {}, last: null });

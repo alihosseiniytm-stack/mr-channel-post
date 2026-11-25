@@ -1,0 +1,24 @@
+name: reddit-drafts
+# T40-24 (owner D348 + D350, 2026-11-25): daily Reddit DRAFTS to the owner's Telegram (monitor bot). Never posts to Reddit, never calls
+# the Reddit API. Days 1-5 = 2-3 comment drafts without links (warm-up), from day 6 + one value-post draft (link last, ?src=reddit).
+on:
+  schedule:
+    - cron: "30 7 * * *"
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  drafts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci
+      - name: tests (drafts have no link in warm-up, ?src after)
+        run: node --test tests/test_x_chart.mjs
+      - name: send drafts to the owner chat
+        env:
+          MONITOR_BOT_TOKEN: ${{ secrets.MONITOR_BOT_TOKEN }}
+          MONITOR_CHAT_ID: ${{ secrets.MONITOR_CHAT_ID }}
+        run: node reddit_drafts.mjs --send
