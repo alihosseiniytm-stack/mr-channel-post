@@ -45,7 +45,7 @@ export function problemsOf(p, staleMin = STALE_MIN) {
 // pure: what to do. openIssue = number of the open incident issue or null
 export function decide(problems, openIssue) {
   if (problems.length && !openIssue) return { alarm: true, open: true };
-  if (problems.length && openIssue) return { alarm: false, comment: true };
+  if (problems.length && openIssue) return { comment: true };
   if (!problems.length && openIssue) return { recovered: true, close: true };
   return {};
 }
@@ -99,7 +99,7 @@ export async function main() {
     daily = "📋 MarketRadar daily health: whale feed newest " + (p.feed_age_s == null ? "unknown" : Math.round(p.feed_age_s / 60) + " min") + ", api " + p.health_status + ", X posts ~24 h " + (xs == null ? "unknown" : xs) + (xs != null && xs < 5 ? " (below 5!)" : "") + ", feed incidents 24 h " + (inc == null ? "unknown" : inc);
     if (await tg(daily)) telegrams++;
   }
-  const summary = { at: new Date(now).toISOString(), ...p, problems, open_issue: openIssue, action: Object.keys(act).join(",") || "none", telegrams, daily: !!daily };
+  const summary = { at: new Date(now).toISOString(), ...p, problems, open_issue: openIssue, action: Object.keys(act).filter((k) => act[k]).join(",") || "none", telegrams, daily: daily || false };
   console.log(JSON.stringify(summary));
   return summary;
 }
