@@ -10,6 +10,11 @@
 //   --report=path  write the human-readable summary (markdown) there
 // Deviation signature = "<kind>:<detail>" strings per page; a page is OK when every signature is the expected one for its family or is
 // listed in the family's knownDeviations (with a reason). Nothing here fixes the site.
+// CI-RED FIX 2026-11-25 (T10-02 #ci-reds, run 45648994233 red since 11-19): the new UI shell (T41-46 tokens, /assets/ui/hdr1.css+js,
+// on all 698 pages since lane 1's UI deploy; /<lang>/chart/ T41-56 has ONLY that shell) was invisible (asset regex skipped sub-folders).
+// Now: ui/ assets are a SEPARATE site-wide check "ui-shell" (every page must load exactly expected.uiShell), family css/js
+// signatures stay without ui/ files; /<lang>/chart/ = own family "chart-app"; hdr1.js counts as the language menu only while
+// hdr1.js itself still builds .mrw-lang (fetched live once per run).
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +41,7 @@ export function familyOf(p) {
   if (LANGS.has(s[0])) {
     const slug = s[1];
     if (s.length === 2) {
+      if (slug === "chart") return "chart-app"; // T41-56 full-screen chart app, new UI shell (hdr1)
       if (WHALE_HUB.test(slug)) return "whales-hub";
       if (LEGACY_LANG_SLUGS.has(slug)) return "legacy-static";
       return "article";
@@ -48,7 +54,14 @@ export function familyOf(p) {
 }
 
 // ---- fetch one page -------------------------------------------------------------------------------------
-const strip = (s) => s.replace(/(\.[0-9a-f]{8,12})+\.(css|js)$/, ".*.$2"); // a.<hash>.<hash>.js (fam files) -> a.*.js
+const strip = (s) => s.replace(/(\.[0-9a-f]{8,12})+\.(css|js)$/, ".*.$2");
+let HDR1_LANG = null; // does /assets/ui/hdr1.js build the .mrw-lang menu? (fetched once per run; a failed fetch = not counted)
+async function hdr1Lang() {
+  if (HDR1_LANG !== null) return HDR1_LANG;
+  try { const r = await fetch(BASE + "/assets/ui/hdr1.js", { signal: AbortSignal.timeout(30000), headers: { "user-agent": "mr-integrity-gate/1" } }); HDR1_LANG = r.ok && /mrw-lang/.test(await r.text()); }
+  catch { HDR1_LANG = false; }
+  return HDR1_LANG;
+} // a.<hash>.<hash>.js (fam files) -> a.*.js
 async function fetchPage(p) {
   let r, bytes;
   for (let a = 0; a < 8; a++) {
@@ -62,10 +75,12 @@ async function fetchPage(p) {
   if (!bytes) return { p, st: 429, err: "429 after retries" };
   const h = bytes.toString("utf8"), head = bytes.subarray(0, 1024).toString("latin1");
   const set = (re) => [...new Set([...h.matchAll(re)].map((m) => strip(m[1])))].sort();
+  const all = [...set(/href="\/assets\/((?:ui\/)?[a-z0-9.\-]+\.css)"/g), ...set(/src="\/assets\/((?:ui\/)?[a-z0-9.\-]+\.js)"/g)];
   return {
     p, st: r.status, fam: familyOf(p),
+    ui: all.filter((x) => x.startsWith("ui/")).sort(),
     css: set(/href="\/assets\/([a-z0-9.\-]+\.css)"/g), js: set(/src="\/assets\/([a-z0-9.\-]+\.js)"/g).filter((x) => !/^fam\./.test(x)), // fam.*.js = per-page content data (coin/exchange tables), not shell: ignored
-    header: /<header[\s>]/.test(h) || /<nav[\s>]/.test(h), lang: /class="[^"]*\bmrw-lang\b/.test(h),
+    header: /<header[\s>]/.test(h) || /<nav[\s>]/.test(h), lang: /class="[^"]*\bmrw-lang\b/.test(h) || (/src="\/assets\/ui\/hdr1\.js"/.test(h) && await hdr1Lang()),
     charset1k: /<meta[^>]+charset/i.test(head), vp: /name="viewport"/.test(h), size: h.length,
   };
 }
@@ -78,6 +93,7 @@ export function deviations(row, exp) {
   const d = [], css = row.css.join("+"), js = row.js.join("+");
   if (css !== e.css.join("+")) d.push("css:" + css);
   if (js !== e.js.join("+")) d.push("js:" + js);
+  if (exp.uiShell && row.ui && row.ui.join("+") !== exp.uiShell.join("+")) d.push("ui-shell:" + (row.ui.join("+") || "missing"));
   if (e.header && !row.header) d.push("header:missing");
   if (e.lang && !row.lang) d.push("lang-menu:missing");
   if (!row.charset1k) d.push("charset:after-1024");
@@ -100,7 +116,7 @@ for (let a = 0; !FROM && a < 6 && !urls.length; a++) {
 if (!FROM && !urls.length) { console.error("GATE ERROR: sitemap empty/unreadable"); process.exitCode = 2; throw new Error("sitemap"); }
 if (LIMIT) urls = urls.slice(0, LIMIT);
 let rows = []; let idx = 0;
-if (FROM) rows = JSON.parse(fs.readFileSync(FROM, "utf8")).map((r) => ({ ...r, fam: familyOf(r.p), css: (r.css || []).map(strip), js: (r.js || []).map(strip).filter((x) => !/^fam\./.test(x)) }));
+if (FROM) rows = JSON.parse(fs.readFileSync(FROM, "utf8")).map((r) => ({ ...r, fam: familyOf(r.p), ui: r.ui || [...(r.css || []), ...(r.js || [])].filter((x) => x.startsWith("ui/")).sort(), css: (r.css || []).map(strip).filter((x) => !x.startsWith("ui/")), js: (r.js || []).map(strip).filter((x) => !/^fam\./.test(x) && !x.startsWith("ui/")) }));
 else await Promise.all(Array.from({ length: CONC }, async () => {
   while (idx < urls.length) {
     const p = urls[idx++]; rows.push(await fetchPage(p));

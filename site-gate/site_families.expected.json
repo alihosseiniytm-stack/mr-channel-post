@@ -1,6 +1,12 @@
 {
  "generated": "2026-10-20",
  "note": "expected = most common asset set per family; deviations of a family are listed in knownDeviations with a reason, NEVER hidden by editing css/js",
+ "uiShell": [
+  "ui/hdr1.css",
+  "ui/hdr1.js",
+  "ui/tokens.css"
+ ],
+ "uiShellNote": "site-wide new UI shell (T41-46 tokens + hdr1 header), on 698/698 sitemap pages 2026-11-25T21:53Z; every page must load exactly this set - ci-reds worker",
  "families": {
   "home": {
    "pages": 1,
@@ -90,6 +96,11 @@
      "reason": "page-own script by design (T30-25 big tx, T31-13 liquidation map, T31-22 whale alerts; 2026-11-05/06): one extra page script on top of the shell set - vizier 18 2026-11-07",
      "pages": 7,
      "example": "/en/whale-alerts/"
+    },
+    "js:pricing.*.js+site.*.js+wbar.*.js": {
+     "reason": "page-own script by design (T41-53 price page + pricing_gate, D298, live 2026-11-19): one extra page script on top of the shell set, same pattern as bigtx/liqmap/wa - ci-reds worker 2026-11-25",
+     "pages": 7,
+     "example": "/en/pricing/"
     }
    }
   },
@@ -431,6 +442,18 @@
    "header": true,
    "lang": true,
    "example": "/trade/ar/aster/",
+   "knownDeviations": {}
+  },
+  "chart-app": {
+   "pages": 7,
+   "css": [
+    "tokens.*.css"
+   ],
+   "js": [],
+   "header": true,
+   "lang": true,
+   "example": "/en/chart/",
+   "note": "T41-56 full-screen chart app (live 2026-11-25) on the new UI shell (T41-46 tokens + hdr1 header that builds the .mrw-lang menu); page script is inline type=module - ci-reds worker 2026-11-25",
    "knownDeviations": {}
   }
  },

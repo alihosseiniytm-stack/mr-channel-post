@@ -1,4 +1,5 @@
 name: site-gate
+# CI-RED FIX 2026-11-25 (T10-02 #ci-reds): red 11-19..11-25 because the new UI shell (/assets/ui/hdr1 + tokens, all pages) and /<lang>/chart/ were invisible to the audit -> separate site-wide ui-shell check + chart-app family; pricing.js listed as page-own script.
 # Daily integrity gate: every sitemap page of marketradarwhale.com must match its family (CSS/JS set, header, language menu, charset, viewport).
 # Canonical script: whale-alert-worker/tools/site_consistency_audit.mjs (+ site_families.expected.json). site-gate/ holds the copy CI runs:
 # after changing the baseline there, copy both files here too.
