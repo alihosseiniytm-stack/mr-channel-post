@@ -1,5 +1,17 @@
 {
- "items": [],
+ "items": [
+  {
+   "id": "btc:f7b98d8cb092e0fccc50b77352fa2d3813b83adbc85634af97b7fb24775cd583:0",
+   "cc": "BTC",
+   "coin": "BTC",
+   "t": 1795651597000,
+   "at": "2026-11-26T00:12:49.039Z",
+   "p0": 60610.693,
+   "amt": "842 #BTC ($50.9M)",
+   "dir": "onto an exchange",
+   "after": null
+  }
+ ],
  "marks": [
   "flow:2026-11-25"
  ]
