@@ -43,6 +43,17 @@
    "amt": "360 #BTC ($21.5M)",
    "dir": "onto an exchange",
    "after": null
+  },
+  {
+   "id": "eth:0x1ae511d985b5cb326344093dce9918c58542ee6e31ac26edba6d1982444aedab:819",
+   "cc": "BTC",
+   "coin": "USDT",
+   "t": 1795825043000,
+   "at": "2026-11-28T02:03:07.601Z",
+   "p0": 60172.835,
+   "amt": "200,000,000 #USDT ($200M)",
+   "dir": "off an exchange",
+   "after": null
   }
  ],
  "marks": [
