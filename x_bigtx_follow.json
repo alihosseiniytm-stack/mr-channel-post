@@ -32,6 +32,17 @@
    "amt": "3,269 #BTC ($196M)",
    "dir": "onto an exchange",
    "after": null
+  },
+  {
+   "id": "btc:5d24f11c4382fc1b7635027e1037a122a002b0730fca6530b9f8638db019a709:0",
+   "cc": "BTC",
+   "coin": "BTC",
+   "t": 1795818916000,
+   "at": "2026-11-28T00:00:53.267Z",
+   "p0": 59896.49,
+   "amt": "360 #BTC ($21.5M)",
+   "dir": "onto an exchange",
+   "after": null
   }
  ],
  "marks": [
